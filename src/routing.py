@@ -9,7 +9,10 @@ class RoutingTable:
     def add_group(self,node,groupList):
         self.groups.append((node,groupList))
 
-
+    def get_neighbours(self,ip):
+        for (node,group) in self.groups:
+            if node == ip:
+                return group
 
     @classmethod
     def load(self,configFile):
@@ -40,7 +43,3 @@ class RoutingTable:
             print("VIZINHOS DE " + node + ":")
             for entry in group:
                 print(entry)
-
-rt = RoutingTable()
-rt.load("config.txt")
-rt.display()
