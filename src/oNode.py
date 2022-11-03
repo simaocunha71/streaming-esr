@@ -4,15 +4,23 @@ import sys
 import os
 from routing import *
 
-
-def server():
-   # Create a datagram socket
+def processing():
+    print("Recebi msg")
+# Server listening
+def service():
    bufferSize = 1024
+
    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
    UDPServerSocket.bind(('',0))
-   print(UDPServerSocket.getsockname()[1])
+
+   port = UDPServerSocket.getsockname()[1]
+   print(port)
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+
+       thread = Thread(target=processing)
+       thread.start()
 
        message = bytesAddressPair[0]
 
@@ -31,25 +39,12 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     n_args = len(args)
 
-    if n_args==2:
-
-        # Adicionar novo nodo à overlay:
-        # eNode -j <bootstrapper_port>
-        if args[0]=="-j" :
-            serverAddressPort = ('',int(args[1]))
-
-        # Iniciar bootstrapper:
-        # eNode -bs <config_file>
-        elif args[0]=="-bs":
-            rt = RoutingTable()
-            rt.load(args[1])
-            rt.display()
-
 
     # Listening
-    thread = Thread(target=server)
+    thread = Thread(target=service)
     thread.start()
 
+    serverAddressPort = ('',int(args[0]))
     # Create a UDP socket at client side
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     while True:
