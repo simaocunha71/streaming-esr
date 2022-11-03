@@ -1,48 +1,46 @@
 
-# Adjacency group
-class Entry:
-    def __init__(self,ip,port):
-        self.ip = ip
-        self.port = port
-
-
 # Routing table of the tracker node
 class RoutingTable:
     @classmethod
     def __init__(self):
-        self.groups = [[]]
+        self.groups = []
 
     @classmethod
-    def add_group(self,groupList):
-        self.groups += [groupList]
+    def add_group(self,node,groupList):
+        self.groups.append((node,groupList))
 
 
 
     @classmethod
     def load(self,configFile):
         f = open(configFile, "r")
-        line = f.readline()
 
-        if line[0] != '#':
-            return "Error config file bad structure"
-
-        rt =  RoutingTable()
         groupList = []
-
+        actual_node = ""
         for line in f:
-            if line[0]=='#':
-                rt.add_group(groupList)
+            line = line.strip()
+            if line == "":
+                continue
+            elif line[0]=='#':
+                if groupList != []:
+                    self.add_group(actual_node,groupList)
+                actual_node = line[1:]
                 groupList = []
             else:
-                content = line.split(" ")
-                groupList += [Entry(content[0],content[1])]
+                groupList.append(line)
 
-        rt.add_group(groupList)
+        if groupList != []:
+            self.add_group(actual_node,groupList)
         f.close()
 
 
     @classmethod
     def display(self):
-        for group in self.groups:
+        for (node,group) in self.groups:
+            print("VIZINHOS DE " + node + ":")
             for entry in group:
-                print(entry.ip + " :: " + entry.port)
+                print(entry)
+
+rt = RoutingTable()
+rt.load("config.txt")
+rt.display()
