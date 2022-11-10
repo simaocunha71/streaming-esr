@@ -25,13 +25,62 @@ def activeNode_handler(bytesAddressPair):
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     UDPClientSocket.sendto(bytesToSend,(ip,int(msg)))
 
-# Server listening
-def service_node():
+
+def Oly_handler():
+    # Implementar handler
+    pass
+
+
+def Rtp_handler():
+    # Implementar rtp handler
+    pass
+
+# Listening for OlyPacket
+def service_Oly():
+    bufferSize = 1024
+
+    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
+    UDPServerSocket.bind(('',0))
+
+    port = UDPServerSocket.getsockname()[1]
+
+    # O nodo tem que mandar uma menssagem de registo
+    msg = str(port)
+
+    bytesToSend = str.encode(msg)
+    UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    UDPClientSocket.sendto(bytesToSend, bootstrapperAddressPort)
+
+    while(True):
+        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+
+        # Aqui chamamos um handler para interpretar a msg e agir de acordo
+        thread = Thread(target=Oly_handler)
+        thread.start()
+
+        message = bytesAddressPair[0]
+
+        data = pickle.loads(message)
+
+
+        address = bytesAddressPair[1]
+
+        clientMsg = "Message from Client:{}".format(str(data))
+        clientIP  = "Client IP Address:{}".format(address)
+
+        print(clientMsg)
+        print(clientIP)
+    os._exit(0)
+
+
+def service_Rtp():
    bufferSize = 1024
 
    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-   UDPServerSocket.bind(('',0))
+   # A porta para escutar pacotes rtp é fixa
+   UDPServerSocket.bind(('',9999))
 
    port = UDPServerSocket.getsockname()[1]
 
@@ -45,9 +94,8 @@ def service_node():
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
-
-
-       thread = Thread(target=processing)
+       # Aqui chamamos um handler para interpretar a msg e agir de acordo
+       thread = Thread(target=Rtp_handler)
        thread.start()
 
        message = bytesAddressPair[0]
@@ -76,6 +124,7 @@ def service_bootstrapper():
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
+        # Aqui chamamos um handler para interpretar a msg e agir de acordo
        thread = Thread(target=activeNode_handler,args=[bytesAddressPair])
        thread.start()
 
@@ -94,35 +143,26 @@ if __name__ == "__main__":
 
     args = sys.argv[1:]
     n_args = len(args)
-    client = False
-    bootstrapper = False
+
     if n_args==1:
         # Adicionar novo nodo à overlay:
         # oNode <bootstrapper_adress>
         bootstrapperAddressPort = (args[0],5555)
-        client = True
+        thread_RTP = Thread(target=service_Rtp)
+        thread_OYP = Thread(target=service_Oly)
+        thread_RTP.start()
+        thread_OYP.start()
     elif n_args==2:
         # Iniciar bootstrapper:
         # oNode -bs <config_file>
         if args[0]=="-bs":
+            print("Bootstrapper running..")
             rt = RoutingTable()
             rt.load(args[1])
             #rt.display()
-            bootstrapper = True
-        elif args[0]=="-c":
-            # Executar como cliente:
-            # oNode -c <bootstrapper_adress>
-            print("Client running")
+            thread = Thread(target=service_bootstrapper)
+            thread.start()
         else:
              print("ERROR")
 
     else: print("ERROR")
-
-    # Listening
-    if(bootstrapper):
-
-        thread = Thread(target=service_bootstrapper)
-        thread.start()
-    else:
-        thread = Thread(target=service_node)
-        thread.start()
