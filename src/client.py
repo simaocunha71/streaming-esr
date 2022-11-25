@@ -156,7 +156,7 @@ class Client:
 			
 			# Write the RTSP request to be sent.
 
-			request = str(requestCode) + " " + self.fileName + " " + str(self.rtspSeq) + "\nTransport: RTP/UDP; client_port= " + str(self.rtpPort)
+			request = str(requestCode) + " " + self.fileName + "\n" + str(self.rtspSeq) + " " + str(self.rtpPort)
 			
 			# Keep track of the sent request.
 			self.requestSent = self.SETUP
@@ -168,7 +168,7 @@ class Client:
 			print('\nPLAY event\n')
 			
 			# Write the RTSP request to be sent.
-			request = str(requestCode) + " " + self.fileName + " " + str(self.rtspSeq) + "\nSession: " + str(self.sessionId) 
+			request = str(requestCode) + " " + self.fileName + "\n" + str(self.rtspSeq)
 			
 			# Keep track of the sent request.
 			self.requestSent = self.PLAY
@@ -180,7 +180,7 @@ class Client:
 			print('\nPAUSE event\n')
 			
 			# Write the RTSP request to be sent.
-			request = str(requestCode) + " " + self.fileName + " " + str(self.rtspSeq) + "\nSession: " + str(self.sessionId) 
+			request = str(requestCode) + " " + self.fileName + "\n" + str(self.rtspSeq)
 			
 			# Keep track of the sent request.
 			self.requestSent = self.PAUSE
@@ -192,7 +192,7 @@ class Client:
 			print('\nTEARDOWN event\n')
 			
 			# Write the RTSP request to be sent.
-			request = str(requestCode) + " " + self.fileName + " " + str(self.rtspSeq) + "\nSession: " + str(self.sessionId) 
+			request = str(requestCode) + " " + self.fileName + "\n" + str(self.rtspSeq)
 			
 			# Keep track of the sent request.
 			self.requestSent = self.TEARDOWN

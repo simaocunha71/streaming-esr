@@ -47,7 +47,8 @@ class ServerWorker:
 		filename = line1[1]
 		
 		# Get the RTSP sequence number 
-		seq = request[1].split(' ')
+		line2 = request[1].split(' ')
+		seq = line2[0]
 		
 		# Process SETUP request
 		if requestType == self.SETUP:
