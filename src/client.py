@@ -200,7 +200,7 @@ class Client:
 			return
 		
 		# Send the RTSP request using rtspSocket.
-		self.rtspSocket.sendto(request,(self.serverAddr,self.serverPort))
+		self.rtspSocket.sendto(request.encode(),(self.serverAddr,self.serverPort))
 		
 		print('\nData sent:\n' + request)
 	
