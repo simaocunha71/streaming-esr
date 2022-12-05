@@ -5,7 +5,7 @@ import os
 import pickle
 from datetime import datetime
 from OlyPacket import *
-from routing import *
+from data import *
 
 listening_port = 0
 
@@ -36,19 +36,23 @@ def activeNode_handler(bytesAddressPair,rt):
         UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
 
 
-def Oly_handler(bytesAddressPair,neighbours):
+def Oly_handler(bytesAddressPair,routingTable):
     ip = bytesAddressPair[1][0]
     msg = bytesAddressPair[0]
 
     olypacket = OlyPacket()
     olypacket = olypacket.decode(msg)
 
+    # Pacote Hello Response
     if olypacket.flag=="HR":
         # O payload é os vizinhos do nodo
         print("Vizinhos")
         print(olypacket.payload)
-        neighbours = olypacket.payload
+        # Cria um possivel fluxo por cada nodo vizinha na tabela de routing
+        for node in olypacket.payload:
+            routingTable.add_stream(node['node_ip'])
 
+    # Pacote de proba
     elif olypacket.flag=="P":
 
         UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -80,6 +84,12 @@ def Oly_handler(bytesAddressPair,neighbours):
 
 def Rtp_handler():
     # Implementar rtp handler
+
+    # Lidar com pacotes de stream
+
+    # Lidar com pedidos de stream
+
+    # Lidar com abandonos de stream
     pass
 
 # Listening for OlyPacket
@@ -103,7 +113,7 @@ def service_Oly():
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
         # Aqui chamamos um handler para interpretar a msg e agir de acordo
-        thread = Thread(target=Oly_handler,args=(bytesAddressPair,neighbours))
+        thread = Thread(target=Oly_handler,args=(bytesAddressPair,routingTable))
         thread.start()
 
     os._exit(0)
@@ -182,7 +192,7 @@ if __name__ == "__main__":
     if n_args==1:
         # Adicionar novo nodo à overlay:
         # oNode <bootstrapper_adress>
-        neighbours = []
+        routingTable = RoutingTable()
         bootstrapperAddressPort = (args[0],5555)
         thread_RTP = Thread(target=service_Rtp)
         thread_OYP = Thread(target=service_Oly)
@@ -193,7 +203,7 @@ if __name__ == "__main__":
         # oNode -bs <config_file>
         if args[0]=="-bs":
             print("Bootstrapper running..")
-            rt = RoutingTable()
+            rt = OverlayTable()
             rt.load(args[1])
             #rt.display()
             thread = Thread(target=service_bootstrapper)

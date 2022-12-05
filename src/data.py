@@ -1,6 +1,6 @@
 
-# Routing table of the tracker node
-class RoutingTable:
+# Tabela quem mantém a informção à cerca de toda a topologia da overlay
+class OverlayTable:
     @classmethod
     def __init__(self):
         self.groups = []
@@ -60,3 +60,36 @@ class RoutingTable:
             print("VIZINHOS DE " + group["node_ip"] + ":")
             for entry in group["neighbours"]:
                 print(entry)
+
+# Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
+class Stream:
+    def __init__(self,destination):
+        self.server = ""
+        self.stream = ""
+        self.time_elapsed = ""
+        self.source = ""
+        self.destination = destination
+        self.state = "closed"
+
+
+# Table de routing, guarda conjunto de streams num nodo
+class RoutingTable:
+
+    def __init__(self):
+        self.streams = []
+
+    def add_stream(self,destination):
+        new_stream = Stream(destination)
+        self.streams.append(new_stream)
+
+    def open_stream(self,time_elapsed,source,destination):
+        for stream in self.streams:
+            if(stream.destination==destination):
+                stream.time_elapsed = time_elapsed
+                stream.source = source
+                stream.state = "open"
+
+    def close_stream(self,destination):
+        for stream in self.streams:
+            if(stream.destination==destination):
+                stream.state = "closed"
