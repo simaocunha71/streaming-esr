@@ -36,7 +36,7 @@ def activeNode_handler(bytesAddressPair,rt):
         UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
 
 
-def Oly_handler(bytesAddressPair,routingTable):
+def Oly_handler(bytesAddressPair,neighbours,routingTable):
     ip = bytesAddressPair[1][0]
     msg = bytesAddressPair[0]
 
@@ -48,9 +48,7 @@ def Oly_handler(bytesAddressPair,routingTable):
         # O payload é os vizinhos do nodo
         print("Vizinhos")
         print(olypacket.payload)
-        # Cria um possivel fluxo por cada nodo vizinha na tabela de routing
-        for node in olypacket.payload:
-            routingTable.add_stream(node['node_ip'])
+        neighbours = olypacket.payload
 
     # Pacote de proba
     elif olypacket.flag=="P":
@@ -82,14 +80,61 @@ def Oly_handler(bytesAddressPair,routingTable):
 
 
 
-def Rtp_handler():
+def Rtp_handler(address,data):
     # Implementar rtp handler
+    """Process RTSP request sent from neighbour node."""
+    # Get the request type
+    request = data.split('\n')
+    line1 = request[0].split(' ')
+    requestType = line1[0]
 
-    # Lidar com pacotes de stream
+    # Get the media file name
+    filename = line1[1]
 
-    # Lidar com pedidos de stream
+    # Get the RTSP sequence number
+    line2 = request[1].split(' ')
+    seq = line2[0]
 
-    # Lidar com abandonos de stream
+    # Ip de onde veio o pedido
+    source_ip = address[0]
+
+    # Process SETUP request
+    if requestType == "SETUP":
+
+        # Preciso implementar mensagens de proba para conseguirmos saber isto
+        destination_ip = "Temos que saber o caminho mais rapido para o servidor?????"
+        # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
+        routingTable.add_stream(source_ip,destination_ip)
+
+        # Difundir o pacote para o próximo nodo
+
+    # Process PLAY request
+    elif requestType == "PLAY":
+
+        routingTable.open_stream(source_ip)
+        # Passar pacote ao próximo nodo
+        # Ler a tabela de rotas passar saber a que nodo passar o pacote
+
+
+    # Process PAUSE request
+    elif requestType == "PAUSE":
+
+        # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
+        routingTable.close_stream(source_ip)
+
+        # Passar pacote ao próximo nodo
+        # Ler a tabela de rotas passar saber a que nodo passar o pacote
+
+    # Process TEARDOWN request
+    elif requestType == "TEARDOWN":
+
+        # Passar pacote ao próximo nodo
+
+
+        # Remover fluxo da tabela de rotas
+        routingTable.delete_stream(source_ip)
+
+
     pass
 
 # Listening for OlyPacket
@@ -113,14 +158,15 @@ def service_Oly():
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
         # Aqui chamamos um handler para interpretar a msg e agir de acordo
-        thread = Thread(target=Oly_handler,args=(bytesAddressPair,routingTable))
+        thread = Thread(target=Oly_handler,args=(bytesAddressPair,routingTable,neighbours))
         thread.start()
 
     os._exit(0)
 
 
 def service_Rtp():
-   bufferSize = 1024
+
+   bufferSize = 256
 
    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
@@ -139,22 +185,17 @@ def service_Rtp():
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
-       # Aqui chamamos um handler para interpretar a msg e agir de acordo
-       thread = Thread(target=Rtp_handler)
-       thread.start()
-
-       message = bytesAddressPair[0]
-
-       data = pickle.loads(message)
-
+       data = bytesAddressPair[0].decode("utf-8")
 
        address = bytesAddressPair[1]
 
-       clientMsg = "Message from Client:{}".format(str(data))
-       clientIP  = "Client IP Address:{}".format(address)
 
-       print(clientMsg)
-       print(clientIP)
+       thread = Thread(target=Rtp_handler,args=(address,data))
+       thread.start()
+
+
+
+
    os._exit(0)
 
 # Bootstrapper listening
@@ -192,7 +233,11 @@ if __name__ == "__main__":
     if n_args==1:
         # Adicionar novo nodo à overlay:
         # oNode <bootstrapper_adress>
+
+        # Informação de estado do Nodo
+        neighbours = []
         routingTable = RoutingTable()
+
         bootstrapperAddressPort = (args[0],5555)
         thread_RTP = Thread(target=service_Rtp)
         thread_OYP = Thread(target=service_Oly)

@@ -63,11 +63,8 @@ class OverlayTable:
 
 # Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
 class Stream:
-    def __init__(self,destination):
-        self.server = ""
-        self.stream = ""
-        self.time_elapsed = ""
-        self.source = ""
+    def __init__(self,source,destination):
+        self.source = source
         self.destination = destination
         self.state = "closed"
 
@@ -78,18 +75,22 @@ class RoutingTable:
     def __init__(self):
         self.streams = []
 
-    def add_stream(self,destination):
-        new_stream = Stream(destination)
+    def add_stream(self,source,destination):
+        new_stream = Stream(source,destination)
         self.streams.append(new_stream)
 
-    def open_stream(self,time_elapsed,source,destination):
+    def open_stream(self,source):
         for stream in self.streams:
-            if(stream.destination==destination):
-                stream.time_elapsed = time_elapsed
-                stream.source = source
+            if(stream.source==source):
                 stream.state = "open"
 
-    def close_stream(self,destination):
+    def close_stream(self,source):
         for stream in self.streams:
-            if(stream.destination==destination):
+            if(stream.source==source):
                 stream.state = "closed"
+
+    def delete_stream(self,source):
+        for stream in self.streams:
+            if(stream.source==source):
+                # Isto funciona?
+                self.streams.remove(stream)
