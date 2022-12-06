@@ -5,16 +5,19 @@ from VideoStream import VideoStream
 from RtpPacket import RtpPacket
 
 class ServerWorker:
+	#RTSP messages
 	SETUP = 'SETUP'
 	PLAY = 'PLAY'
 	PAUSE = 'PAUSE'
 	TEARDOWN = 'TEARDOWN'
 	
+	#Streaming states
 	INIT = 0
 	READY = 1
 	PLAYING = 2
 	state = INIT
 
+	#Sucess/Error codes
 	OK_200 = 0
 	FILE_NOT_FOUND_404 = 1
 	CON_ERR_500 = 2
@@ -22,9 +25,11 @@ class ServerWorker:
 	clientInfo = {}
 	
 	def __init__(self, clientInfo):
+		"""Server Worker initialization"""
 		self.clientInfo = clientInfo
 		
 	def run(self):
+		"""Server Worker into a thread"""
 		threading.Thread(target=self.recvRtspRequest).start()
 	
 	def recvRtspRequest(self):
@@ -150,7 +155,6 @@ class ServerWorker:
 	def replyRtsp(self, code, seq):
 		"""Send RTSP reply to the client."""
 		if code == self.OK_200:
-			#print("200 OK")
 			reply = 'RTSP/1.0 200 OK\nCSeq: ' + seq + '\nSession: ' + str(self.clientInfo['session'])
 			connSocket = self.clientInfo['rtspSocket'][0]
 			connSocket.send(reply.encode())
