@@ -1,8 +1,8 @@
 from random import randint
 import sys, traceback, threading, socket
 
-from video_stream import VideoStream
-from rtp_packet import RtpPacket
+from VideoStream import VideoStream
+from RtpPacket import RtpPacket
 
 class ServerWorker:
 	SETUP = 'SETUP'
@@ -25,18 +25,18 @@ class ServerWorker:
 		self.clientInfo = clientInfo
 		
 	def run(self):
-		threading.Thread(target=self.receive_RtspRequest).start()
+		threading.Thread(target=self.recvRtspRequest).start()
 	
-	def receive_RtspRequest(self):
+	def recvRtspRequest(self):
 		"""Receive RTSP request from the client."""
 		connSocket = self.clientInfo['rtspSocket'][0]
 		while True:            
 			data = connSocket.recv(256)
 			if data:
 				print("Data received:\n" + data.decode("utf-8"))
-				self.process_RtspRequest(data.decode("utf-8"))
+				self.processRtspRequest(data.decode("utf-8"))
 	
-	def process_RtspRequest(self, data):
+	def processRtspRequest(self, data):
 		"""Process RTSP request sent from the client."""
 		# Get the request type
 		request = data.split('\n')
@@ -47,8 +47,7 @@ class ServerWorker:
 		filename = line1[1]
 		
 		# Get the RTSP sequence number 
-		line2 = request[1].split(' ')
-		seq = line2[0]
+		seq = request[1].split(' ')
 		
 		# Process SETUP request
 		if requestType == self.SETUP:
@@ -69,7 +68,7 @@ class ServerWorker:
 				self.replyRtsp(self.OK_200, seq[1])
 				
 				# Get the RTP/UDP port from the last line
-				self.clientInfo['rtpPort'] = request[2].split(' ')[3]
+				self.clientInfo['rtpPort'] = request[1].split(' ')[2]
 		
 		# Process PLAY request 		
 		elif requestType == self.PLAY:
@@ -124,11 +123,12 @@ class ServerWorker:
 					address = self.clientInfo['rtspSocket'][1][0]
 					port = int(self.clientInfo['rtpPort'])
 					self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(address,port))
-				except:
+				except Exception as e:
 					print("Connection Error")
-					#print('-'*60)
-					#traceback.print_exc(file=sys.stdout)
-					#print('-'*60)
+					print(e)
+					print('-'*60)
+					traceback.print_exc(file=sys.stdout)
+					print('-'*60)
 
 	def makeRtp(self, payload, frameNbr):
 		"""RTP-packetize the video data."""

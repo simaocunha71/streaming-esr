@@ -11,7 +11,12 @@ class RtpPacket:
 	def encode(self, version, padding, extension, cc, seqnum, marker, pt, ssrc, payload):
 		"""Encode the RTP packet with header fields and payload."""
 		timestamp = int(time())
-		header = bytearray(HEADER_SIZE) 
+		header = bytearray(HEADER_SIZE)
+		#--------------
+		# TO COMPLETE
+		#--------------
+		# Fill the header bytearray with RTP header fields
+		
 		header[0] = (header[0] | version << 6) & 0xC0; # 2 bits
 		header[0] = (header[0] | padding << 5); # 1 bit
 		header[0] = (header[0] | extension << 4); # 1 bit
@@ -31,36 +36,38 @@ class RtpPacket:
 		# set header and  payload
 		self.header = header
 		self.payload = payload
-
+		
+		# Get the payload from the argument
+		# self.payload = ...
 		
 	def decode(self, byteStream):
 		"""Decode the RTP packet."""
 		self.header = bytearray(byteStream[:HEADER_SIZE])
 		self.payload = byteStream[HEADER_SIZE:]
 	
-	def get_version(self):
+	def version(self):
 		"""Return RTP version."""
 		return int(self.header[0] >> 6)
 	
-	def get_sequenceNumber(self):
+	def seqNum(self):
 		"""Return sequence (frame) number."""
 		seqNum = self.header[2] << 8 | self.header[3]
 		return int(seqNum)
 	
-	def get_timestamp(self):
+	def timestamp(self):
 		"""Return timestamp."""
 		timestamp = self.header[4] << 24 | self.header[5] << 16 | self.header[6] << 8 | self.header[7]
 		return int(timestamp)
 	
-	def get_payloadType(self):
+	def payloadType(self):
 		"""Return payload type."""
 		pt = self.header[1] & 127
 		return int(pt)
 	
-	def get_Payload(self):
+	def getPayload(self):
 		"""Return payload."""
 		return self.payload
 		
-	def get_Packet(self):
+	def getPacket(self):
 		"""Return RTP packet."""
 		return self.header + self.payload
