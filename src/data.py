@@ -70,7 +70,7 @@ class Stream:
 
 
 # Table de routing, guarda conjunto de streams num nodo
-class RoutingTable:
+class StreamsTable:
 
     def __init__(self):
         self.streams = []
@@ -94,3 +94,30 @@ class RoutingTable:
             if(stream.source==source):
                 # Isto funciona?
                 self.streams.remove(stream)
+
+class Route:
+    def __init__(self):
+        self.source = ""
+        self.saltos = 0
+        self.delta = ""
+
+class RoutingTable:
+
+    def __init__(self):
+        self.routes = []
+
+    def add_route(self,source,saltos,delta):
+        self.source = source
+        self.saltos = saltos
+        self.delta = delta
+
+
+    def next_jump(self):
+        min = self.routes[0].delta
+        next_jump = self.routes[0].source
+        for route in routes:
+            if route.delta < min:
+                min = route.delta
+                next_jump = route.source
+
+        return next_jump

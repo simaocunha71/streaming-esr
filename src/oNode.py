@@ -8,7 +8,7 @@ from OlyPacket import *
 from data import *
 
 listening_port = 0
-
+RTP_PORT = 9999
 def processing():
     print("Recebi msg xdxdxd ")
 
@@ -57,14 +57,20 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
         UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
 
         now = datetime.now()
+
+        # Timestamp marcado no servidor
         timestamp = olypacket.payload[0]
+
         delta = now - timestamp
+
+        # Número de saltos do servidor até o nodo atual
         saltos = olypacket.payload[1] + 1
 
-        # Falta adiconar a uma tabela de rotas, para o nodo saber o melhor caminho
+        #cada entrada da tabela assume que é o tempo e custo até ao servidor
+        #info ta tabela: source_ip saltos time_cost destinos
+        streamsTable.add_route(ip,saltos,delta)
 
-        # Timestamp que o servidor marcou na primeira mensagem de proba
-        # Saltos até nr de saltos até ao momento
+        # Data a enviar aos nodos viznhos
         data = [timestamp,saltos]
 
         prob_packet = OlyPacket()
@@ -80,11 +86,13 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
 
 
-def Rtp_handler(address,data):
+def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
     # Implementar rtp handler
     """Process RTSP request sent from neighbour node."""
+
+    data_decoded = data.decode("utf-8")
     # Get the request type
-    request = data.split('\n')
+    request = data_decoded.split('\n')
     line1 = request[0].split(' ')
     requestType = line1[0]
 
@@ -98,29 +106,30 @@ def Rtp_handler(address,data):
     # Ip de onde veio o pedido
     source_ip = address[0]
 
+    destination_ip = routingTable.next_jump()
     # Process SETUP request
     if requestType == "SETUP":
 
         # Preciso implementar mensagens de proba para conseguirmos saber isto
-        destination_ip = "Temos que saber o caminho mais rapido para o servidor?????"
+
         # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
-        routingTable.add_stream(source_ip,destination_ip)
+        streamsTable.add_stream(source_ip,destination_ip)
+
 
         # Difundir o pacote para o próximo nodo
 
     # Process PLAY request
     elif requestType == "PLAY":
 
-        routingTable.open_stream(source_ip)
+        streamsTable.open_stream(source_ip)
         # Passar pacote ao próximo nodo
         # Ler a tabela de rotas passar saber a que nodo passar o pacote
-
 
     # Process PAUSE request
     elif requestType == "PAUSE":
 
         # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
-        routingTable.close_stream(source_ip)
+        streamsTable.close_stream(source_ip)
 
         # Passar pacote ao próximo nodo
         # Ler a tabela de rotas passar saber a que nodo passar o pacote
@@ -130,12 +139,11 @@ def Rtp_handler(address,data):
 
         # Passar pacote ao próximo nodo
 
-
         # Remover fluxo da tabela de rotas
-        routingTable.delete_stream(source_ip)
-
-
+        streamsTable.delete_stream(source_ip)
     pass
+
+    UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
 
 # Listening for OlyPacket
 def service_Oly():
@@ -171,7 +179,7 @@ def service_Rtp():
    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
    # A porta para escutar pacotes rtp é fixa
-   UDPServerSocket.bind(('',9999))
+   UDPServerSocket.bind(('',RTP_PORT))
 
    port = UDPServerSocket.getsockname()[1]
 
@@ -185,12 +193,12 @@ def service_Rtp():
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
-       data = bytesAddressPair[0].decode("utf-8")
+       data = bytesAddressPair[0]
 
        address = bytesAddressPair[1]
 
 
-       thread = Thread(target=Rtp_handler,args=(address,data))
+       thread = Thread(target=Rtp_handler,args=(UDPClientSocket,routingTable,streamsTable,address,data))
        thread.start()
 
 
@@ -237,6 +245,7 @@ if __name__ == "__main__":
         # Informação de estado do Nodo
         neighbours = []
         routingTable = RoutingTable()
+        streamsTable = StreamsTable()
 
         bootstrapperAddressPort = (args[0],5555)
         thread_RTP = Thread(target=service_Rtp)
