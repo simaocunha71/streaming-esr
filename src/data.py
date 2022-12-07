@@ -1,10 +1,11 @@
+from threading import Lock
 
 # Tabela quem mantém a informção à cerca de toda a topologia da overlay
 class OverlayTable:
     @classmethod
     def __init__(self):
         self.groups = []
-        self.lock = threading.Lock()
+        self.lock = Lock()
 
     @classmethod
     def add_group(self,ip,groupList):
@@ -87,7 +88,7 @@ class Stream:
 class StreamsTable:
 
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = Lock()
         self.streams = []
 
     def add_stream(self,source,destination):
@@ -135,7 +136,7 @@ class Route:
 class RoutingTable:
 
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = Lock()
         self.routes = []
 
     def add_route(self,source,saltos,delta):
