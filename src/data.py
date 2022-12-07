@@ -4,31 +4,44 @@ class OverlayTable:
     @classmethod
     def __init__(self):
         self.groups = []
+        self.lock = threading.Lock()
 
     @classmethod
     def add_group(self,ip,groupList):
         self.groups.append({ "node_ip" : ip ,"port" : -1,"neighbours" : groupList})
 
     def get_port(self,ip):
-        for group in self.groups:
-            if group["node_ip"] == ip:
-                return group["port"]
+        self.lock.acquire()
+        try:
+            for group in self.groups:
+                if group["node_ip"] == ip:
+                    return group["port"]
+        finally:
+            self.lock.release()
 
     def get_neighbours(self,ip):
-        neighbours_list = []
-        for group in self.groups:
-            if group["node_ip"] == ip:
-                for entry in group["neighbours"]:
-                    neighbours_list.append({ "node_ip" : entry, "port" : self.get_port(entry)})
+        self.lock.acquire()
+        try:
+            neighbours_list = []
+            for group in self.groups:
+                if group["node_ip"] == ip:
+                    for entry in group["neighbours"]:
+                        neighbours_list.append({ "node_ip" : entry, "port" : self.get_port(entry)})
+        finally:
+            self.lock.release()
 
         return neighbours_list
 
 
 
     def active_node(self,ip,listening_port):
-        for group in self.groups:
-            if group["node_ip"]==ip:
-                group["port"] = listening_port
+        self.lock.acquire()
+        try:
+            for group in self.groups:
+                if group["node_ip"]==ip:
+                    group["port"] = listening_port
+        finally:
+            self.lock.release()
 
 
     @classmethod
@@ -69,55 +82,81 @@ class Stream:
         self.state = "closed"
 
 
+
 # Table de routing, guarda conjunto de streams num nodo
 class StreamsTable:
 
     def __init__(self):
+        self.lock = threading.Lock()
         self.streams = []
 
     def add_stream(self,source,destination):
-        new_stream = Stream(source,destination)
-        self.streams.append(new_stream)
+        self.lock.acquire()
+        try:
+            new_stream = Stream(source,destination)
+            self.streams.append(new_stream)
+        finally:
+            self.lock.release()
 
     def open_stream(self,source):
-        for stream in self.streams:
-            if(stream.source==source):
-                stream.state = "open"
+        self.lock.acquire()
+        try:
+            for stream in self.streams:
+                if(stream.source==source):
+                    stream.state = "open"
+        finally:
+            self.lock.release()
 
     def close_stream(self,source):
-        for stream in self.streams:
-            if(stream.source==source):
-                stream.state = "closed"
+        self.lock.acquire()
+        try:
+            for stream in self.streams:
+                if(stream.source==source):
+                    stream.state = "closed"
+        finally:
+            self.lock.release()
 
     def delete_stream(self,source):
-        for stream in self.streams:
-            if(stream.source==source):
-                # Isto funciona?
-                self.streams.remove(stream)
+        self.lock.acquire()
+        try:
+            for stream in self.streams:
+                if(stream.source==source):
+                    # Isto funciona?
+                    self.streams.remove(stream)
+        finally:
+            self.lock.release()
 
 class Route:
-    def __init__(self):
-        self.source = ""
-        self.saltos = 0
-        self.delta = ""
-
-class RoutingTable:
-
-    def __init__(self):
-        self.routes = []
-
-    def add_route(self,source,saltos,delta):
+    def __init__(self,source,saltos,delta):
         self.source = source
         self.saltos = saltos
         self.delta = delta
 
+class RoutingTable:
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.routes = []
+
+    def add_route(self,source,saltos,delta):
+        self.lock.acquire()
+        try:
+            new_route = Route(source,saltos,delta)
+            self.routes.append()
+        finally:
+            self.lock.release()
+
 
     def next_jump(self):
-        min = self.routes[0].delta
-        next_jump = self.routes[0].source
-        for route in routes:
-            if route.delta < min:
-                min = route.delta
-                next_jump = route.source
+        self.lock.acquire()
+        try:
+            min = self.routes[0].delta
+            next_jump = self.routes[0].source
+            for route in routes:
+                if route.delta < min:
+                    min = route.delta
+                    next_jump = route.source
+        finally:
+            self.lock.release()
 
         return next_jump
