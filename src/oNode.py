@@ -178,8 +178,9 @@ def service_Rtp():
 
    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
+   my_ip = socket.gethostbyname(socket.gethostname())
    # A porta para escutar pacotes rtp é fixa
-   UDPServerSocket.bind(('',RTP_PORT))
+   UDPServerSocket.bind((my_ip,RTP_PORT))
 
    port = UDPServerSocket.getsockname()[1]
 
