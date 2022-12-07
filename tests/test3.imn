@@ -79,6 +79,10 @@ node n5 {
     network-config {
 	hostname R2
 	!
+	interface eth3
+	 ip address 10.0.21.1/24
+	 ipv6 address 2001:21::1/64
+	!
 	interface eth2
 	 ip address 10.0.5.1/24
 	 ipv6 address 2001:5::1/64
@@ -98,6 +102,7 @@ node n5 {
     interface-peer {eth0 n4}
     interface-peer {eth1 n6}
     interface-peer {eth2 n8}
+    interface-peer {eth3 n26}
 }
 
 node n6 {
@@ -543,6 +548,23 @@ node n25 {
     interface-peer {eth0 n16}
 }
 
+node n26 {
+    type router
+    model host
+    network-config {
+	hostname bootstrapper
+	!
+	interface eth0
+	 ip address 10.0.21.10/24
+	 ipv6 address 2001:21::10/64
+	!
+    }
+    canvas c1
+    iconcoords {750.0 21.0}
+    labelcoords {809.0 34.0}
+    interface-peer {eth0 n5}
+}
+
 link l1 {
     nodes {n2 n1}
     bandwidth 0
@@ -695,6 +717,11 @@ link l30 {
 
 link l31 {
     nodes {n15 n23}
+    bandwidth 0
+}
+
+link l32 {
+    nodes {n5 n26}
     bandwidth 0
 }
 
