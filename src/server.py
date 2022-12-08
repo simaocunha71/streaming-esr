@@ -1,5 +1,5 @@
 import sys, socket
-import datetime
+from datetime import datetime
 
 from threading import Thread
 from OlyPacket import OlyPacket
@@ -9,7 +9,7 @@ bufferSize = 1024
 
 class Server:
 
-    def oly_handler(self,bytesAddressPair,neighbours):
+    def oly_handler(self,bytesAddressPair,neighbours, UDPClientSocket):
         ip = bytesAddressPair[1][0]
         msg = bytesAddressPair[0]
         olypacket = OlyPacket()
@@ -17,12 +17,14 @@ class Server:
         if olypacket.flag == "HR":
             # Recebe vizinhos do bootstrapper
             neighbours = olypacket.payload
+            print("Vizinhos")
+            print(neighbours)
             # Cria mensagem de proba
             probe_message = OlyPacket()
             timestamp = datetime.now()
             saltos = 0
             data = [timestamp,saltos]
-            probe_message.encode("P",data)
+            probe_message = probe_message.encode("P",data)
              # Envia mensagem de proba para o vizinho
             UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],neighbours[0]['port']))
 
@@ -42,15 +44,15 @@ class Server:
             bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)	
             neighbours = []
             # Aqui chamamos um handler para interpretar a msg e agir de acordo
-            thread = Thread(target=Server.oly_handler,args=(bytesAddressPair,neighbours))
+            thread = Thread(target=Server.oly_handler,args=(Server,bytesAddressPair,neighbours, UDPClientSocket))
             thread.start()	
         os._exit(0)	
 
     def rtp_service(self):
         try:
-            SERVER_PORT = int(sys.argv[2])
+            SERVER_PORT = int(sys.argv[1])
         except:
-            print("[Usage: Server.py Server_port]\n")
+            print("[Usage: Server.py Server_port IP_Bootstrapper]\n")
         rtspSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
@@ -65,6 +67,6 @@ class Server:
 
 if __name__ == "__main__":
     # Recebe o ip do bootstrapper, escuta porOlypackets
-    Server().oly_service(sys.argv[1])
+    Server().oly_service(sys.argv[2])
     # Escuta por pacotes RTP
     (Server()).rtp_service()

@@ -192,17 +192,13 @@ class Client:
 			
 			# Keep track of the sent request.
 			self.requestSent = self.TEARDOWN
-		else:
-			return
+
 		
 		if(type_request == "SETUP"):
 			request = f'{type_request} {self.fileName}\n {self.rtspSeq} {self.rtpPort}'
 
 		elif(type_request == "PLAY" or type_request == "PAUSE" or type_request == "TEARDOWN"):
 			request = f'{type_request} {self.fileName}\n {self.rtspSeq}'
-
-		else:
-			return
 
 		# Send the RTSP request using rtspSocket.
 		self.rtspSocket.send(request.encode('utf-8'))

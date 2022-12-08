@@ -9,23 +9,24 @@ from data import *
 
 listening_port = 0
 RTP_PORT = 9999
-def processing():
-    print("Recebi msg xdxdxd ")
 
 def activeNode_handler(bytesAddressPair,rt):
+    print("DISPLAY2")
+    rt.display()
     ip = bytesAddressPair[1][0]
     msg = bytesAddressPair[0]
 
-    test_ip = "10.0.2.2"
 
     hello_packet = OlyPacket()
     hello_packet = hello_packet.decode(msg)
 
     if hello_packet.flag=="H":
+        print("Recebi mensagem hello | IP: " + ip)
         # Ir buscar os vizinhos do nodo que se está a ativar
-        neighbours = rt.get_neighbours(test_ip)
+        neighbours = rt.get_neighbours(ip)
+        print(neighbours)
         # Ativar o nodo passando a porta que este está a atender
-        rt.active_node(test_ip,hello_packet.payload)
+        rt.active_node(ip,hello_packet.payload)
 
         hello_response_packet = OlyPacket()
 
@@ -52,7 +53,7 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
     # Pacote de proba
     elif olypacket.flag=="P":
-
+        print("Recebi pacote de prova | IP: " + ip)
         UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
 
@@ -76,11 +77,11 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
         prob_packet = OlyPacket()
         encoded_prob_packet = prob_packet.encode("P",data)
 
-        # FALTA identificar se está ligado a um cliente, caso esteja tem que mandar ao servidor a infromação do tempo e nr de saltos
+        # SEMI-TODO identificar se está ligado a um cliente, caso esteja tem que mandar ao servidor a infromação do tempo e nr de saltos
 
         # O nodo envia mensagem de proba a todos os seus vizinhos ativos
         for elem in neighbours:
-            if elem['port']!=-1 && elem['ip'] != ip:
+            if elem['port']!=-1 and elem['ip'] != ip:
                 UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],elem['port']))
 
 
@@ -109,6 +110,7 @@ def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
     destination_ip = routingTable.next_jump()
     # Process SETUP request
     if requestType == "SETUP":
+        print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
 
         # Preciso implementar mensagens de proba para conseguirmos saber isto
 
@@ -120,14 +122,14 @@ def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
 
     # Process PLAY request
     elif requestType == "PLAY":
-
+        print("Fluxo ativo | source: "+ source_ip)
         streamsTable.open_stream(source_ip)
         # Passar pacote ao próximo nodo
         # Ler a tabela de rotas passar saber a que nodo passar o pacote
 
     # Process PAUSE request
     elif requestType == "PAUSE":
-
+        print("Fluxo pausado | source: "+ source_ip)
         # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
         streamsTable.close_stream(source_ip)
 
@@ -136,12 +138,11 @@ def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
 
     # Process TEARDOWN request
     elif requestType == "TEARDOWN":
-
+        print("Fluxo fechado | source: "+ source_ip)
         # Passar pacote ao próximo nodo
 
         # Remover fluxo da tabela de rotas
         streamsTable.delete_stream(source_ip)
-    pass
 
     UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
 
@@ -183,12 +184,12 @@ def service_Rtp():
 
    port = UDPServerSocket.getsockname()[1]
 
-   # O nodo tem que mandar uma menssagem de registo
-   msg = str(port)
-
-   bytesToSend = str.encode(msg)
-   UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-   UDPClientSocket.sendto(bytesToSend, bootstrapperAddressPort)
+   ## O nodo tem que mandar uma menssagem de registo
+   #msg = str(port)
+#
+   #bytesToSend = str.encode(msg)
+   #UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+   #UDPClientSocket.sendto(bytesToSend, bootstrapperAddressPort)
 
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
@@ -222,15 +223,6 @@ def service_bootstrapper():
        thread = Thread(target=activeNode_handler,args=(bytesAddressPair,rt))
        thread.start()
 
-       message = bytesAddressPair[0]
-
-       address = bytesAddressPair[1]
-
-       clientMsg = "Message from Client:{}".format(message)
-       clientIP  = "Client IP Address:{}".format(address)
-
-       print(clientMsg)
-       print(clientIP)
    os._exit(0)
 
 if __name__ == "__main__":
