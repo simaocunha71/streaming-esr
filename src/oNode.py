@@ -24,7 +24,6 @@ def activeNode_handler(bytesAddressPair,rt):
         print("Recebi mensagem hello | IP: " + ip)
         # Ir buscar os vizinhos do nodo que se está a ativar
         neighbours = rt.get_neighbours(ip)
-        print(neighbours)
         # Ativar o nodo passando a porta que este está a atender
         rt.active_node(ip,hello_packet.payload)
 
@@ -54,9 +53,6 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
     # Pacote de proba
     elif olypacket.flag=="P":
         print("Recebi pacote de prova | IP: " + ip)
-        UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
-
         now = datetime.now()
 
         # Timestamp marcado no servidor
@@ -69,7 +65,7 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
         #cada entrada da tabela assume que é o tempo e custo até ao servidor
         #info ta tabela: source_ip saltos time_cost destinos
-        streamsTable.add_route(ip,saltos,delta)
+        routingTable.add_route(ip,saltos,delta)
 
         # Data a enviar aos nodos viznhos
         data = [timestamp,saltos]
@@ -167,7 +163,7 @@ def service_Oly():
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
         # Aqui chamamos um handler para interpretar a msg e agir de acordo
-        thread = Thread(target=Oly_handler,args=(bytesAddressPair,routingTable,neighbours))
+        thread = Thread(target=Oly_handler,args=(bytesAddressPair,neighbours, routingTable))
         thread.start()
 
     os._exit(0)

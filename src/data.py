@@ -145,7 +145,7 @@ class RoutingTable:
         self.lock.acquire()
         try:
             new_route = Route(source,saltos,delta)
-            self.routes.append()
+            self.routes.append(new_route)
         finally:
             self.lock.release()
 
