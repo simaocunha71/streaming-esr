@@ -80,7 +80,7 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
         # O nodo envia mensagem de proba a todos os seus vizinhos ativos
         for elem in neighbours:
-            if elem['port']!=-1:
+            if elem['port']!=-1 && elem['ip'] != ip:
                 UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],elem['port']))
 
 

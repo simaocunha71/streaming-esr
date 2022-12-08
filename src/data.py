@@ -147,6 +147,11 @@ class RoutingTable:
         finally:
             self.lock.release()
 
+    def print(self):
+        print("Routing Table:")
+        print("Origem------Saltos------Delta")
+        for route in self.routes:
+            print(route.source + "      " + route.saltos + "      " + route.delta)
 
     def next_jump(self):
         self.lock.acquire()
