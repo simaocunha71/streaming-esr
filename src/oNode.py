@@ -8,11 +8,13 @@ from OlyPacket import *
 from data import *
 
 listening_port = 0
-RTP_PORT = 9999
 
-def activeNode_handler(bytesAddressPair,rt):
+RTP_PORT = 9999
+OLY_PORT = 5555
+
+def activeNode_handler(bytesAddressPair,olytable):
     print("DISPLAY2")
-    rt.display()
+    olytable.display()
     ip = bytesAddressPair[1][0]
     msg = bytesAddressPair[0]
 
@@ -22,10 +24,8 @@ def activeNode_handler(bytesAddressPair,rt):
 
     if hello_packet.flag=="H":
         print("Recebi mensagem hello | IP: " + ip)
-        # Ir buscar os vizinhos do nodo que se está a ativar
-        neighbours = rt.get_neighbours(ip)
-        # Ativar o nodo passando a porta que este está a atender
-        rt.active_node(ip,hello_packet.payload)
+        # Ir buscar os vizinhos do nodo que se ligou
+        neighbours = olytable.get_neighbours(ip)
 
         hello_response_packet = OlyPacket()
 
@@ -33,7 +33,7 @@ def activeNode_handler(bytesAddressPair,rt):
 
 
         UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        UDPClientSocket.sendto(hello_response_packet,(ip,hello_packet.payload))
+        UDPClientSocket.sendto(hello_response_packet,(ip,OLY_PORT))
 
 
 def Oly_handler(bytesAddressPair,neighbours,routingTable):
@@ -77,11 +77,8 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
         # O nodo envia mensagem de proba a todos os seus vizinhos ativos
         for elem in neighbours:
-            if elem['port']!=-1 and elem['ip'] != ip:
-                UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],elem['port']))
-
-
-
+            if elem['ip'] != ip:
+                UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],OLY_PORT))
 
 def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
     # Implementar rtp handler
@@ -154,7 +151,7 @@ def service_Oly():
 
     # O nodo tem que mandar uma menssagem de registo
     hello_packet = OlyPacket()
-    encoded_packet = hello_packet.encode("H",port)
+    encoded_packet = hello_packet.encode("H","")
 
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     UDPClientSocket.sendto(encoded_packet, bootstrapperAddressPort)
@@ -216,7 +213,7 @@ def service_bootstrapper():
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
 
         # Aqui chamamos um handler para interpretar a msg e agir de acordo
-       thread = Thread(target=activeNode_handler,args=(bytesAddressPair,rt))
+       thread = Thread(target=activeNode_handler,args=(bytesAddressPair,olytable))
        thread.start()
 
    os._exit(0)
@@ -227,6 +224,7 @@ if __name__ == "__main__":
     n_args = len(args)
 
     if n_args==1:
+        print("------------NODE------------")
         # Adicionar novo nodo à overlay:
         # oNode <bootstrapper_adress>
 
@@ -235,7 +233,8 @@ if __name__ == "__main__":
         routingTable = RoutingTable()
         streamsTable = StreamsTable()
 
-        bootstrapperAddressPort = (args[0],5555)
+        bootstrapperAddressPort = (args[0],OLY_PORT)
+
         thread_RTP = Thread(target=service_Rtp)
         thread_OYP = Thread(target=service_Oly)
         thread_RTP.start()
@@ -244,9 +243,9 @@ if __name__ == "__main__":
         # Iniciar bootstrapper:
         # oNode -bs <config_file>
         if args[0]=="-bs":
-            print("Bootstrapper running..")
-            rt = OverlayTable()
-            rt.load(args[1])
+            print("------------Bootstrapper------------")
+            olytable = OverlayTable()
+            olytable.load(args[1])
             #rt.display()
             thread = Thread(target=service_bootstrapper)
             thread.start()

@@ -7,6 +7,10 @@ from ServerWorker import ServerWorker
 
 bufferSize = 1024
 
+OLY_PORT = 5555
+RTP_PORT = 9999
+
+
 class Server:
 
     def oly_handler(self,bytesAddressPair,neighbours, UDPClientSocket):
@@ -25,38 +29,35 @@ class Server:
             saltos = 0
             data = [timestamp,saltos]
             probe_message = probe_message.encode("P",data)
-             # Envia mensagem de proba para o vizinho
-            UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],neighbours[0]['port']))
+
+            # Envia mensagem de proba para o vizinho (o servidor só tem um vizinho)
+            UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],OLY_PORT))
 
     def oly_service(self, bs_ip):
         UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         UDPServerSocket.bind(('',0))
         port = UDPServerSocket.getsockname()[1]
-        
+
         # O nodo tem que mandar uma menssagem de registo
-        
+
         hello_packet = OlyPacket()
-        encoded_packet = hello_packet.encode("H",port)	
+        encoded_packet = hello_packet.encode("H",port)
         UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        UDPClientSocket.sendto(encoded_packet, (bs_ip,5555)) #bootstrapper fica a escuta na porta 5555 	
+        UDPClientSocket.sendto(encoded_packet,(bs_ip,OLY_PORT)) #bootstrapper fica a escuta na porta 5555
         # Servidor fica à escuta de OlyPackets
         while(True):
-            bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)	
+            bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
             neighbours = []
             # Aqui chamamos um handler para interpretar a msg e agir de acordo
             thread = Thread(target=Server.oly_handler,args=(Server,bytesAddressPair,neighbours, UDPClientSocket))
-            thread.start()	
-        os._exit(0)	
+            thread.start()
+        os._exit(0)
 
     def rtp_service(self):
-        try:
-            SERVER_PORT = int(sys.argv[1])
-        except:
-            print("[Usage: Server.py Server_port IP_Bootstrapper]\n")
+
         rtspSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-
-        rtspSocket.bind(('',SERVER_PORT))
+        rtspSocket.bind(('',RTP_PORT))
         rtspSocket.listen(5)
 
         # Receive client info (address,port) through RTSP/TCP session
@@ -66,7 +67,7 @@ class Server:
             ServerWorker(clientInfo).run()
 
 if __name__ == "__main__":
-    # Recebe o ip do bootstrapper, escuta porOlypackets
-    Server().oly_service(sys.argv[2])
+    # Recebe o ip do bootstrapper
+    Server().oly_service(sys.argv[1])
     # Escuta por pacotes RTP
     (Server()).rtp_service()

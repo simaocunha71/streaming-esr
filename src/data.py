@@ -9,13 +9,7 @@ class OverlayTable:
 
     @classmethod
     def add_group(self,ip,groupList):
-        self.groups.append({ "node_ip" : ip ,"port" : -1,"neighbours" : groupList})
-
-    def get_port(self,ip):
-        for group in self.groups:
-            if group["node_ip"] == ip:
-                return group["port"]
-
+        self.groups.append({ "node_ip" : ip ,"neighbours" : groupList })
 
     def get_neighbours(self,ip):
         self.lock.acquire()
@@ -24,28 +18,12 @@ class OverlayTable:
             for group in self.groups:
                 if group["node_ip"] == ip:
                     for entry in group["neighbours"]:
-                        neighbours_list.append({ "node_ip" : entry, "port" : self.get_port(entry)})
-            
-            print("Vizinho: ")
-            print(neighbours_list)
+                        neighbours_list.append({ "node_ip" : entry })
             return neighbours_list
         except Exception as e:
             print(e)
         finally:
             self.lock.release()
-
-
-
-
-    def active_node(self,ip,listening_port):
-        self.lock.acquire()
-        try:
-            for group in self.groups:
-                if group["node_ip"]==ip:
-                    group["port"] = listening_port
-        finally:
-            self.lock.release()
-
 
     @classmethod
     def load(self,configFile):
@@ -167,4 +145,3 @@ class RoutingTable:
             return next_jump
         finally:
             self.lock.release()
-
