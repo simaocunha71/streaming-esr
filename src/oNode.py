@@ -145,7 +145,7 @@ def service_Oly():
 
     UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-    UDPServerSocket.bind(('',0))
+    UDPServerSocket.bind(('',OLY_PORT))
 
     port = UDPServerSocket.getsockname()[1]
 

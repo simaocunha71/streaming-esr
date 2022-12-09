@@ -1,4 +1,5 @@
 import sys
+import socket
 from tkinter import Tk
 from client import Client
 from OlyPacket import OlyPacket
@@ -6,39 +7,56 @@ from OlyPacket import OlyPacket
 RTP_PORT = 9999
 OLY_PORT = 5555
 
+def Oly_handler(bytesAddressPair):
+    neighbours = []
+    ip = bytesAddressPair[1][0]
+    msg = bytesAddressPair[0]
+
+    olypacket = OlyPacket()
+    olypacket = olypacket.decode(msg)
+
+    # Pacote Hello Response
+    if olypacket.flag=="HR":
+        # O payload é os vizinhos do nodo
+        print("Vizinhos")
+        print(olypacket.payload)
+        neighbours = olypacket.payload
+
+    return neighbours
+
+
+
 if __name__ == "__main__":
-	try:
-		bootstrapperAddr = sys.argv[1]
-		fileName = sys.argv[2]
-	except:
-		print("[Usage: ClientLauncher.py bootstrapperAddr Video_file]\n")
+    try:
+        bootstrapperAddr = sys.argv[1]
+        fileName = sys.argv[2]
+    except:
+        print("[Usage: ClientLauncher.py bootstrapperAddr Video_file]\n")
 
-	print("------------CLI------------")
-	# Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
-	UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    print("------------CLI------------")
+    # Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
+    UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    UDPServerSocket.bind(('',OLY_PORT))
 
-	hello_packet = OlyPacket()
+
+    hello_packet = OlyPacket()
     encoded_packet = hello_packet.encode("H","")
 
     UDPClientSocket.sendto(encoded_packet,(bootstrapperAddr,OLY_PORT))
 
-	# Recebe respostas do bootstrapper
-	bytesAddressPair = UDPClientSocket.recv(1024)
+    # Recebe respostas do bootstrapper
 
-	hello_response_packet = OlyPacket()
-    hello_response_packet = hello_response_packet.decode(bytesAddressPair[0])
-
-	# Vizinho do cliente
-	neighbours = hello_response_packet.payload
-	
-	print("Vizinhos")
-	print(neighbours)
+    bytesAddressPair = UDPServerSocket.recvfrom(1024)
+    neighbours = Oly_handler(bytesAddressPair)
+    #thread = Thread(target=Oly_handler,args=(bytesAddressPair))
+    #thread.start()
 
 
+    root = Tk()
 
-	root = Tk()
-
-	# Create a new client
-	app = Client(root, neighbours[0]['node_ip'], RTP_PORT, RTP_PORT, fileName)
-	app.master.title("RTPClient")
-	root.mainloop()
+    # Create a new client
+    print(neighbours)
+    app = Client(root, neighbours[0]['node_ip'], 4444, RTP_PORT, fileName)
+    app.master.title("RTPClient")
+    root.mainloop()
