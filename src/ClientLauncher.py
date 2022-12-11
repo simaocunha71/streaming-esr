@@ -36,6 +36,7 @@ if __name__ == "__main__":
     print("------------CLI------------")
     # Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
     UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     UDPServerSocket.bind(('',OLY_PORT))
 
@@ -43,6 +44,7 @@ if __name__ == "__main__":
     hello_packet = OlyPacket()
     encoded_packet = hello_packet.encode("H","")
 
+    # Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
     UDPClientSocket.sendto(encoded_packet,(bootstrapperAddr,OLY_PORT))
 
     # Recebe respostas do bootstrapper
@@ -57,6 +59,6 @@ if __name__ == "__main__":
 
     # Create a new client
     print(neighbours)
-    app = Client(root, neighbours[0]['node_ip'], 4444, RTP_PORT, fileName)
+    app = Client(root, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT, fileName)
     app.master.title("RTPClient")
     root.mainloop()

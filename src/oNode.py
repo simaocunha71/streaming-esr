@@ -36,8 +36,9 @@ def activeNode_handler(bytesAddressPair,olytable):
         UDPClientSocket.sendto(hello_response_packet,(ip,OLY_PORT))
 
 
+
 def Oly_handler(bytesAddressPair,neighbours,routingTable):
-    ip = bytesAddressPair[1][0]
+    source_ip = bytesAddressPair[1][0]
     msg = bytesAddressPair[0]
 
     olypacket = OlyPacket()
@@ -52,7 +53,7 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
     # Pacote de proba
     elif olypacket.flag=="P":
-        print("Recebi pacote de prova | IP: " + ip)
+        print("Recebi pacote de prova | IP: " + source_ip)
         now = datetime.now()
 
         # Timestamp marcado no servidor
@@ -65,7 +66,7 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
         #cada entrada da tabela assume que é o tempo e custo até ao servidor
         #info ta tabela: source_ip saltos time_cost destinos
-        routingTable.add_route(ip,saltos,delta)
+        routingTable.add_route(source_ip,saltos,delta)
 
         # Data a enviar aos nodos viznhos
         data = [timestamp,saltos]
@@ -77,65 +78,47 @@ def Oly_handler(bytesAddressPair,neighbours,routingTable):
 
         # O nodo envia mensagem de proba a todos os seus vizinhos ativos
         for elem in neighbours:
-            if elem['ip'] != ip:
+            if elem['ip'] != source_ip:
                 UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],OLY_PORT))
+    else:
+        destination_ip = routingTable.next_jump()
+
+        if olypacket.flag=="SETUP":
+            print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
+
+            # Preciso implementar mensagens de proba para conseguirmos saber isto
+            # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
+            streamsTable.add_stream(source_ip,destination_ip)
+
+        elif olypacket.flag == "PLAY":
+            print("Fluxo ativo | source: "+ source_ip)
+            streamsTable.open_stream(source_ip)
+
+        elif olypacket.flag == "PAUSE":
+            print("Fluxo pausado | source: "+ source_ip)
+            # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
+            streamsTable.close_stream(source_ip)
+
+        elif requestType == "TEARDOWN":
+            print("Fluxo fechado | source: "+ source_ip)
+            # Passar pacote ao próximo nodo
+
+            # Remover fluxo da tabela de rotas
+            streamsTable.delete_stream(source_ip)
+
+        UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
 
 def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
-    # Implementar rtp handler
-    """Process RTSP request sent from neighbour node."""
-
-    data_decoded = data.decode("utf-8")
-    # Get the request type
-    request = data_decoded.split('\n')
-    line1 = request[0].split(' ')
-    requestType = line1[0]
-
-    # Get the media file name
-    filename = line1[1]
-
-    # Get the RTSP sequence number
-    line2 = request[1].split(' ')
-    seq = line2[0]
+    # RTP redirect
+    # Pacote de stream
 
     # Ip de onde veio o pedido
     source_ip = address[0]
 
     destination_ip = routingTable.next_jump()
-    # Process SETUP request
-    if requestType == "SETUP":
-        print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
 
-        # Preciso implementar mensagens de proba para conseguirmos saber isto
+    print("Próximo salto: " + destination_ip)
 
-        # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
-        streamsTable.add_stream(source_ip,destination_ip)
-
-
-        # Difundir o pacote para o próximo nodo
-
-    # Process PLAY request
-    elif requestType == "PLAY":
-        print("Fluxo ativo | source: "+ source_ip)
-        streamsTable.open_stream(source_ip)
-        # Passar pacote ao próximo nodo
-        # Ler a tabela de rotas passar saber a que nodo passar o pacote
-
-    # Process PAUSE request
-    elif requestType == "PAUSE":
-        print("Fluxo pausado | source: "+ source_ip)
-        # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
-        streamsTable.close_stream(source_ip)
-
-        # Passar pacote ao próximo nodo
-        # Ler a tabela de rotas passar saber a que nodo passar o pacote
-
-    # Process TEARDOWN request
-    elif requestType == "TEARDOWN":
-        print("Fluxo fechado | source: "+ source_ip)
-        # Passar pacote ao próximo nodo
-
-        # Remover fluxo da tabela de rotas
-        streamsTable.delete_stream(source_ip)
 
     UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
 
@@ -177,12 +160,6 @@ def service_Rtp():
 
    port = UDPServerSocket.getsockname()[1]
 
-   ## O nodo tem que mandar uma menssagem de registo
-   #msg = str(port)
-#
-   #bytesToSend = str.encode(msg)
-   #UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-   #UDPClientSocket.sendto(bytesToSend, bootstrapperAddressPort)
 
    while(True):
        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
