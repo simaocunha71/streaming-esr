@@ -130,9 +130,7 @@ class ServerWorker:
 			if data:
 				frameNumber = self.clientInfo['videoStream'].frameNbr()
 				try:
-					address = self.clientInfo['rtspSocket'][1][0]
-					port = int(self.clientInfo['rtpPort'])
-					self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(address,port))
+					self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(self.nodeAdrr,self.nodePort))
 				except Exception as e:
 					print("Connection Error")
 					print(e)

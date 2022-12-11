@@ -99,14 +99,15 @@ if __name__ == "__main__":
         if neighbours:
             clientInfo = {}
             clientInfo['rtspSocket'] = UDPServerSocket
-            ServerWorker(clientInfo,neighbours[0],RTP_PORT).run()
+            ServerWorker(clientInfo,neighbours[0]["node_ip"],RTP_PORT).run()
 
 
         # Cria mensagem de proba
         probe_message = OlyPacket()
         timestamp = datetime.now()
         saltos = 0
-        data = [timestamp,saltos]
+        server_ip = neighbours[-1]
+        data = [timestamp,saltos, server_ip]
         probe_message = probe_message.encode("P",data)
 
         print("Mensagem de proba enviada")

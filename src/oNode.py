@@ -8,7 +8,7 @@ from OlyPacket import *
 from data import *
 
 listening_port = 0
-bufferSize_rtp = 256
+bufferSize_rtp = 20480
 bufferSize_oly = bufferSize_bs = 1024
 RTP_PORT = 9999
 OLY_PORT = 5555
@@ -37,6 +37,7 @@ class oNode:
             print("Recebi mensagem hello | IP: " + ip)
             # Ir buscar os vizinhos do nodo que se ligou
             neighbours = self.olytable.get_neighbours(ip)
+            neighbours.append(ip)
 
             hello_response_packet = OlyPacket()
 
@@ -77,6 +78,9 @@ class oNode:
 
             # Número de saltos do servidor até o nodo atual
             saltos = olypacket.payload[1] + 1
+            
+            # IP de quem enviou pacote de probe
+            probe_source_ip = olypacket.payload[2]
 
             #cada entrada da tabela assume que é o tempo e custo até ao servidor
             #info ta tabela: source_ip saltos time_cost destinos
@@ -85,7 +89,7 @@ class oNode:
             self.routingTable.print()
 
             # Data a enviar aos nodos viznhos
-            data = [timestamp,saltos]
+            data = [timestamp,saltos, self.neighbours[-1]]
 
             prob_packet = OlyPacket()
             encoded_prob_packet = prob_packet.encode("P",data)
@@ -94,9 +98,9 @@ class oNode:
 
             # O nodo envia mensagem de proba a todos os seus vizinhos ativos
             print("Envio probe para os vizinhos")
-            for elem in self.neighbours:
-                print(elem['node_ip'])
-                if elem['node_ip'] != source_ip:
+            for elem in self.neighbours[:-1]:
+                print("NodeIP: " + elem['node_ip'] + " | SOURCEIP: " + source_ip)
+                if elem['node_ip'] != probe_source_ip:
                     self.olyClientSocket.sendto(encoded_prob_packet,(elem['node_ip'],OLY_PORT))
         else:
             print("Recebi \"else\"")
@@ -127,7 +131,7 @@ class oNode:
                 # Remover fluxo da tabela de rotas
                 self.streamsTable.delete_stream(source_ip)
 
-            self.olyClientSocket.sendto(msg,(destination_ip,RTP_PORT))
+            self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
     def Rtp_handler(self, address,data):
         # RTP redirect
@@ -135,13 +139,13 @@ class oNode:
 
         # Ip de onde veio o pedido
         source_ip = address[0]
+        open_streams = self.streamsTable.get_streams()
 
-        destination_ip = self.routingTable.next_jump()
+        #stream.source: endereços sao guardados inicialmente do sv para o cliente. Logo é necessário chamá-los pela ordem inversa
+        for stream in open_streams:
+            print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source) 
+            self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
 
-        print("Próximo salto: " + destination_ip)
-
-
-        self.rtpClientSocket.sendto(data,(destination_ip,RTP_PORT))
 
     # Listening for OlyPacket
     def service_Oly(self):

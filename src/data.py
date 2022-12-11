@@ -102,8 +102,18 @@ class StreamsTable:
         try:
             for stream in self.streams:
                 if(stream.source==source):
-                    # Isto funciona?
                     self.streams.remove(stream)
+        finally:
+            self.lock.release()
+
+    def get_streams(self):
+        self.lock.acquire()
+        try:
+            open_entries = []
+            for stream in self.streams:
+                if(stream.state=="open"):
+                    open_entries.append(stream)
+            return open_entries
         finally:
             self.lock.release()
 
