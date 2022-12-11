@@ -131,14 +131,14 @@ class RoutingTable:
         print("Routing Table:")
         print("Origem------Saltos------Delta")
         for route in self.routes:
-            print(route.source + "      " + route.saltos + "      " + route.delta)
+            print(str(route.source) + "      " + str(route.saltos) + "      " + str(route.delta))
 
     def next_jump(self):
         self.lock.acquire()
         try:
             min = self.routes[0].delta
             next_jump = self.routes[0].source
-            for route in routes:
+            for route in self.routes:
                 if route.delta < min:
                     min = route.delta
                     next_jump = route.source

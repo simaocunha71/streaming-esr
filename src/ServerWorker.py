@@ -1,6 +1,7 @@
 from random import randint
 import sys, traceback, threading, socket
 
+from OlyPacket import OlyPacket
 from VideoStream import VideoStream
 from RtpPacket import RtpPacket
 
@@ -42,14 +43,14 @@ class ServerWorker:
 			data = connSocket.recvfrom(256)
 			if data:
 				request = OlyPacket()
-				request = request.decode(data)
+				request = request.decode(data[0])
 				print("Data received:\n" + request.flag)
 				self.processRtspRequest(request)
 
 	def processRtspRequest(self, data):
 		"""Process RTSP request sent from the client."""
-		# Get the request type
 
+		# Get the request type
 		requestType = data.flag
 
 		# Get the media file name

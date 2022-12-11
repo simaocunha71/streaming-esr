@@ -13,8 +13,6 @@ RTP_PORT = 9999
 
 class Server:
 
-    def rtp_handler(self,):
-
     def oly_handler(self,bytesAddressPair,neighbours, UDPClientSocket):
         ip = bytesAddressPair[1][0]
         msg = bytesAddressPair[0]
@@ -46,7 +44,7 @@ class Server:
             data = [timestamp,saltos]
             probe_message = probe_message.encode("P",data)
 
-            Print("Menssagem de proba enviada")
+            print("Mensagem de proba enviada")
             # Envia mensagem de proba para o vizinho (o servidor só tem um vizinho)
             UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],OLY_PORT))
 
@@ -74,6 +72,7 @@ if __name__ == "__main__":
 
     UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     UDPServerSocket.bind(('',OLY_PORT))
+    bs_ip = sys.argv[1]
 
     # O nodo tem que mandar uma menssagem de registo
 
@@ -110,8 +109,6 @@ if __name__ == "__main__":
         data = [timestamp,saltos]
         probe_message = probe_message.encode("P",data)
 
-        Print("Menssagem de proba enviada")
+        print("Mensagem de proba enviada")
         # Envia mensagem de proba para o vizinho (o servidor só tem um vizinho)
         UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],OLY_PORT))
-
-    Server().oly_service(sys.argv[1])

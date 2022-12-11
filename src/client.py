@@ -72,17 +72,22 @@ class Client:
 		"""Setup button handler."""
 		if self.state == self.INIT:
 			self.sendRtspRequest(self.SETUP)
+			self.state = self.READY
+			self.openRtpPort()
 
 	def exitClient(self):
 		"""Teardown button handler."""
 		self.sendRtspRequest(self.TEARDOWN)
 		self.master.destroy() # Close the gui window
 		os.remove(CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT) # Delete the cache image from video
+		self.state = self.INIT
 
 	def pauseMovie(self):
 		"""Pause button handler."""
 		if self.state == self.PLAYING:
 			self.sendRtspRequest(self.PAUSE)
+			self.state = self.READY
+			self.playEvent.set()
 
 	def playMovie(self):
 		"""Play button handler."""
@@ -92,6 +97,7 @@ class Client:
 			self.playEvent = threading.Event()
 			self.playEvent.clear()
 			self.sendRtspRequest(self.PLAY)
+			self.state = self.PLAYING
 
 	def listenRtp(self):
 		"""Listen for RTP packets."""
@@ -150,7 +156,7 @@ class Client:
 			self.requestSent = self.SETUP
 
 		# Play request
-		elif requestCode == self.PLAY:
+		elif requestCode == self.PLAY and self.state == self.READY:
 			# Update RTSP sequence number.
 			self.rtspSeq+=1
 			print('\nPLAY event\n')
@@ -189,16 +195,18 @@ class Client:
 		request = OlyPacket()
 		if(type_request == "SETUP"):
 			payload = {"file_name" : self.fileName, "rtpsp_seq" : self.rtspSeq, "rtp_port": self.rtpPort}
-			request.encode(type_request,payload)
+			request = request.encode(type_request,payload)
 
 		elif(type_request == "PLAY" or type_request == "PAUSE" or type_request == "TEARDOWN"):
 			payload = {"file_name" : self.fileName, "rtpsp_seq" : self.rtspSeq}
-			request.encode(type_request,payload)
+			request = request.encode(type_request,payload)
 
+		print("TYPEREQUEST: ")
+		print(type_request)
+		print("NODE ADDRESS: ")
+		print(self.nodeAddr)
 		# Send the RTSP request using rtspSocket.
 		self.rtspSocket.sendto(request,(self.nodeAddr,self.rtspPort))
-
-		print('\nData sent:\n' + request)
 
 	def openRtpPort(self):
 		"""Open RTP socket binded to a specified port."""

@@ -8,197 +8,203 @@ from OlyPacket import *
 from data import *
 
 listening_port = 0
-
+bufferSize_rtp = 256
+bufferSize_oly = bufferSize_bs = 1024
 RTP_PORT = 9999
 OLY_PORT = 5555
 
-def activeNode_handler(bytesAddressPair,olytable):
-    print("DISPLAY2")
-    olytable.display()
-    ip = bytesAddressPair[1][0]
-    msg = bytesAddressPair[0]
+class oNode:
+    def __init__(self, isBootstrapper, bootstrapperAddressPort):
+        self.isBootstrapper = isBootstrapper
+        self.bootstrapperAddressPort = bootstrapperAddressPort
+        self.neighbours = []
+        self.routingTable = RoutingTable()
+        self.streamsTable = StreamsTable()
+        if(self.isBootstrapper == True):
+            self.olytable = OverlayTable()
+
+    def activeNode_handler(self, bytesAddressPair):
+        #print("DISPLAY2")
+        #olytable.display()
+        ip = bytesAddressPair[1][0]
+        msg = bytesAddressPair[0]
 
 
-    hello_packet = OlyPacket()
-    hello_packet = hello_packet.decode(msg)
+        hello_packet = OlyPacket()
+        hello_packet = hello_packet.decode(msg)
 
-    if hello_packet.flag=="H":
-        print("Recebi mensagem hello | IP: " + ip)
-        # Ir buscar os vizinhos do nodo que se ligou
-        neighbours = olytable.get_neighbours(ip)
+        if hello_packet.flag=="H":
+            print("Recebi mensagem hello | IP: " + ip)
+            # Ir buscar os vizinhos do nodo que se ligou
+            neighbours = self.olytable.get_neighbours(ip)
 
-        hello_response_packet = OlyPacket()
+            hello_response_packet = OlyPacket()
 
-        hello_response_packet = hello_response_packet.encode("HR",neighbours)
+            hello_response_packet = hello_response_packet.encode("HR",neighbours)
 
 
-        UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        UDPClientSocket.sendto(hello_response_packet,(ip,OLY_PORT))
+            self.olyClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+            self.olyClientSocket.sendto(hello_response_packet,(ip,OLY_PORT))
 
 
 
-def Oly_handler(bytesAddressPair,neighbours,routingTable):
-    source_ip = bytesAddressPair[1][0]
-    msg = bytesAddressPair[0]
+    def Oly_handler(self, bytesAddressPair):
+        source_ip = bytesAddressPair[1][0]
+        msg = bytesAddressPair[0]
 
-    olypacket = OlyPacket()
-    olypacket = olypacket.decode(msg)
+        olypacket = OlyPacket()
+        olypacket = olypacket.decode(msg)
 
-    # Pacote Hello Response
-    if olypacket.flag=="HR":
-        # O payload é os vizinhos do nodo
-        print("Vizinhos")
-        print(olypacket.payload)
-        neighbours = olypacket.payload
+        print("IP de origem " + source_ip)
+        print("OLYPacket FLAG: " + olypacket.flag)
 
-    # Pacote de proba
-    elif olypacket.flag=="P":
-        print("Recebi pacote de prova | IP: " + source_ip)
-        now = datetime.now()
+        # Pacote Hello Response
+        if olypacket.flag=="HR":
+            # O payload é os vizinhos do nodo
+            print("Vizinhos")
+            print(olypacket.payload)
+            self.neighbours = olypacket.payload
 
-        # Timestamp marcado no servidor
-        timestamp = olypacket.payload[0]
+        # Pacote de proba
+        elif olypacket.flag=="P":
+            print("Recebi pacote de prova | IP: " + source_ip)
+            now = datetime.now()
 
-        delta = now - timestamp
+            # Timestamp marcado no servidor
+            timestamp = olypacket.payload[0]
 
-        # Número de saltos do servidor até o nodo atual
-        saltos = olypacket.payload[1] + 1
+            delta = now - timestamp
 
-        #cada entrada da tabela assume que é o tempo e custo até ao servidor
-        #info ta tabela: source_ip saltos time_cost destinos
-        routingTable.add_route(source_ip,saltos,delta)
+            # Número de saltos do servidor até o nodo atual
+            saltos = olypacket.payload[1] + 1
 
-        # Data a enviar aos nodos viznhos
-        data = [timestamp,saltos]
+            #cada entrada da tabela assume que é o tempo e custo até ao servidor
+            #info ta tabela: source_ip saltos time_cost destinos
+            self.routingTable.add_route(source_ip,saltos,delta)
+            print("Recebi \"P\"")
+            self.routingTable.print()
 
-        prob_packet = OlyPacket()
-        encoded_prob_packet = prob_packet.encode("P",data)
+            # Data a enviar aos nodos viznhos
+            data = [timestamp,saltos]
 
-        # SEMI-TODO identificar se está ligado a um cliente, caso esteja tem que mandar ao servidor a infromação do tempo e nr de saltos
+            prob_packet = OlyPacket()
+            encoded_prob_packet = prob_packet.encode("P",data)
 
-        # O nodo envia mensagem de proba a todos os seus vizinhos ativos
-        for elem in neighbours:
-            if elem['ip'] != source_ip:
-                UDPClientSocket.sendto(encoded_prob_packet,(elem['ip'],OLY_PORT))
-    else:
-        destination_ip = routingTable.next_jump()
+            # SEMI-TODO identificar se está ligado a um cliente, caso esteja tem que mandar ao servidor a infromação do tempo e nr de saltos
 
-        if olypacket.flag=="SETUP":
-            print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
+            # O nodo envia mensagem de proba a todos os seus vizinhos ativos
+            print("Envio probe para os vizinhos")
+            for elem in self.neighbours:
+                print(elem['node_ip'])
+                if elem['node_ip'] != source_ip:
+                    self.olyClientSocket.sendto(encoded_prob_packet,(elem['node_ip'],OLY_PORT))
+        else:
+            print("Recebi \"else\"")
+            self.routingTable.print()
+            destination_ip = self.routingTable.next_jump()
+            print("FLAG:")
+            print(olypacket.flag)
+            if olypacket.flag=="SETUP":
+                print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
 
-            # Preciso implementar mensagens de proba para conseguirmos saber isto
-            # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
-            streamsTable.add_stream(source_ip,destination_ip)
+                # Preciso implementar mensagens de proba para conseguirmos saber isto
+                # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
+                self.streamsTable.add_stream(source_ip,destination_ip)
 
-        elif olypacket.flag == "PLAY":
-            print("Fluxo ativo | source: "+ source_ip)
-            streamsTable.open_stream(source_ip)
+            elif olypacket.flag == "PLAY":
+                print("Fluxo ativo | source: "+ source_ip)
+                self.streamsTable.open_stream(source_ip)
 
-        elif olypacket.flag == "PAUSE":
-            print("Fluxo pausado | source: "+ source_ip)
-            # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
-            streamsTable.close_stream(source_ip)
+            elif olypacket.flag == "PAUSE":
+                print("Fluxo pausado | source: "+ source_ip)
+                # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
+                self.streamsTable.close_stream(source_ip)
 
-        elif requestType == "TEARDOWN":
-            print("Fluxo fechado | source: "+ source_ip)
-            # Passar pacote ao próximo nodo
+            elif requestType == "TEARDOWN":
+                print("Fluxo fechado | source: "+ source_ip)
+                # Passar pacote ao próximo nodo
 
-            # Remover fluxo da tabela de rotas
-            streamsTable.delete_stream(source_ip)
+                # Remover fluxo da tabela de rotas
+                self.streamsTable.delete_stream(source_ip)
 
-        UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
+            self.olyClientSocket.sendto(msg,(destination_ip,RTP_PORT))
 
-def Rtp_handler(address,data,UDPClientSocket,routingTable,streamsTable):
-    # RTP redirect
-    # Pacote de stream
+    def Rtp_handler(self, address,data):
+        # RTP redirect
+        # Pacote de stream
 
-    # Ip de onde veio o pedido
-    source_ip = address[0]
+        # Ip de onde veio o pedido
+        source_ip = address[0]
 
-    destination_ip = routingTable.next_jump()
+        destination_ip = self.routingTable.next_jump()
 
-    print("Próximo salto: " + destination_ip)
+        print("Próximo salto: " + destination_ip)
 
 
-    UDPClientSocket.sendto(data,destination_ip,RTP_PORT)
+        self.rtpClientSocket.sendto(data,(destination_ip,RTP_PORT))
 
-# Listening for OlyPacket
-def service_Oly():
-    bufferSize = 1024
+    # Listening for OlyPacket
+    def service_Oly(self):
+        self.olyServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-    UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.olyServerSocket.bind(('',OLY_PORT))
 
-    UDPServerSocket.bind(('',OLY_PORT))
+        # O nodo tem que mandar uma menssagem de registo
+        hello_packet = OlyPacket()
+        encoded_packet = hello_packet.encode("H","")
 
-    port = UDPServerSocket.getsockname()[1]
+        self.olyClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.olyClientSocket.sendto(encoded_packet, self.bootstrapperAddressPort)
 
-    # O nodo tem que mandar uma menssagem de registo
-    hello_packet = OlyPacket()
-    encoded_packet = hello_packet.encode("H","")
+        while(True):
+            bytesAddressPair = self.olyServerSocket.recvfrom(bufferSize_oly)
 
-    UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    UDPClientSocket.sendto(encoded_packet, bootstrapperAddressPort)
+            # Aqui chamamos um handler para interpretar a msg e agir de acordo
+            thread = Thread(target=self.Oly_handler,args=[bytesAddressPair])
+            thread.start()
 
-    while(True):
-        bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+        os._exit(0)
 
-        # Aqui chamamos um handler para interpretar a msg e agir de acordo
-        thread = Thread(target=Oly_handler,args=(bytesAddressPair,neighbours, routingTable))
-        thread.start()
 
-    os._exit(0)
+    def service_Rtp(self):
+       self.rtpServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    
+       # A porta para escutar pacotes rtp é fixa
+       self.rtpServerSocket.bind(('',RTP_PORT))
+       self.rtpClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
+       while(True):
+           bytesAddressPair = self.rtpServerSocket.recvfrom(bufferSize_rtp)
+           data = bytesAddressPair[0]
+           address = bytesAddressPair[1]
 
-def service_Rtp():
+           thread = Thread(target=self.Rtp_handler,args=(address,data))
+           thread.start()
 
-   bufferSize = 256
 
-   UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-   # A porta para escutar pacotes rtp é fixa
-   UDPServerSocket.bind(('',RTP_PORT))
 
-   port = UDPServerSocket.getsockname()[1]
+       os._exit(0)
 
+    # Bootstrapper listening
+    def service_bootstrapper(self):
+       self.olyServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+       self.olyServerSocket.bind(('',OLY_PORT))
 
-   while(True):
-       bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
+       while(True):
+           bytesAddressPair = self.olyServerSocket.recvfrom(bufferSize_bs)
 
-       data = bytesAddressPair[0]
+            # Aqui chamamos um handler para interpretar a msg e agir de acordo
+           thread = Thread(target=self.activeNode_handler,args=[bytesAddressPair])
+           thread.start()
 
-       address = bytesAddressPair[1]
-
-
-       thread = Thread(target=Rtp_handler,args=(UDPClientSocket,routingTable,streamsTable,address,data))
-       thread.start()
-
-
-
-
-   os._exit(0)
-
-# Bootstrapper listening
-def service_bootstrapper():
-   bufferSize = 1024
-
-   UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-
-   UDPServerSocket.bind((UDPServerSocket.getsockname()[0],5555))
-   print(UDPServerSocket.getsockname()[0])
-
-   while(True):
-       bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
-
-        # Aqui chamamos um handler para interpretar a msg e agir de acordo
-       thread = Thread(target=activeNode_handler,args=(bytesAddressPair,olytable))
-       thread.start()
-
-   os._exit(0)
+       os._exit(0)
 
 if __name__ == "__main__":
 
     args = sys.argv[1:]
     n_args = len(args)
+
 
     if n_args==1:
         print("------------NODE------------")
@@ -206,14 +212,12 @@ if __name__ == "__main__":
         # oNode <bootstrapper_adress>
 
         # Informação de estado do Nodo
-        neighbours = []
-        routingTable = RoutingTable()
-        streamsTable = StreamsTable()
-
         bootstrapperAddressPort = (args[0],OLY_PORT)
+        onode = oNode(isBootstrapper=False, bootstrapperAddressPort=bootstrapperAddressPort)
 
-        thread_RTP = Thread(target=service_Rtp)
-        thread_OYP = Thread(target=service_Oly)
+        #UDPClientSocket,routingTable,streamsTable
+        thread_RTP = Thread(target=onode.service_Rtp)
+        thread_OYP = Thread(target=onode.service_Oly)
         thread_RTP.start()
         thread_OYP.start()
     elif n_args==2:
@@ -221,10 +225,10 @@ if __name__ == "__main__":
         # oNode -bs <config_file>
         if args[0]=="-bs":
             print("------------Bootstrapper------------")
-            olytable = OverlayTable()
-            olytable.load(args[1])
+            bootstrapper = oNode(isBootstrapper=True, bootstrapperAddressPort="")
+            bootstrapper.olytable.load(args[1])
             #rt.display()
-            thread = Thread(target=service_bootstrapper)
+            thread = Thread(target=bootstrapper.service_bootstrapper)
             thread.start()
         else:
              print("ERROR")
