@@ -57,9 +57,10 @@ class OverlayTable:
 
 # Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
 class Stream:
-    def __init__(self,source,destination):
+    def __init__(self,source,destination, client):
         self.source = source
         self.destination = destination
+        self.client = client
         self.state = "closed"
 
 
@@ -71,37 +72,37 @@ class StreamsTable:
         self.lock = Lock()
         self.streams = []
 
-    def add_stream(self,source,destination):
+    def add_stream(self,source,destination, client_ip):
         self.lock.acquire()
         try:
-            new_stream = Stream(source,destination)
+            new_stream = Stream(source,destination, client_ip)
             self.streams.append(new_stream)
         finally:
             self.lock.release()
 
-    def open_stream(self,source):
+    def open_stream(self,client_ip):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.client_ip==client_ip):
                     stream.state = "open"
         finally:
             self.lock.release()
 
-    def close_stream(self,source):
+    def close_stream(self,client_ip):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.client_ip==client_ip):
                     stream.state = "closed"
         finally:
             self.lock.release()
 
-    def delete_stream(self,source):
+    def delete_stream(self,client_ip):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.client_ip==client_ip):
                     self.streams.remove(stream)
         finally:
             self.lock.release()

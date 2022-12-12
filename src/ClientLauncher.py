@@ -50,7 +50,10 @@ if __name__ == "__main__":
     # Recebe respostas do bootstrapper
 
     bytesAddressPair = UDPServerSocket.recvfrom(1024)
-    neighbours = Oly_handler(bytesAddressPair)
+    data = Oly_handler(bytesAddressPair)
+    neighbours = data[:-2]
+    ip = data[-2]
+    ssrc = data[-1]
     #thread = Thread(target=Oly_handler,args=(bytesAddressPair))
     #thread.start()
 
@@ -59,6 +62,6 @@ if __name__ == "__main__":
 
     # Create a new client
     print(neighbours)
-    app = Client(root, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT, fileName)
+    app = Client(root, ip, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT, fileName, ssrc)
     app.master.title("RTPClient")
     root.mainloop()

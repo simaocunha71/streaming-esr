@@ -34,21 +34,22 @@ class ServerWorker:
 
 	def run(self):
 		"""Server Worker into a thread"""
-		threading.Thread(target=self.recvRtspRequest).start()
+		threading.Thread(target=self.processRtspRequest).start()
 
-	def recvRtspRequest(self):
-		"""Receive RTSP request from the client."""
-		connSocket = self.clientInfo['rtspSocket']
-		while True:
-			data = connSocket.recvfrom(256)
-			if data:
-				request = OlyPacket()
-				request = request.decode(data[0])
-				print("Data received:\n" + request.flag)
-				self.processRtspRequest(request)
+	#def recvRtspRequest(self):
+	#	"""Receive RTSP request from the client."""
+	#	connSocket = self.clientInfo['rtspSocket']
+	#	while True:
+	#		data = connSocket.recvfrom(256)
+	#		if data:
+	#			request = OlyPacket()
+	#			request = request.decode(data[0])
+	#			print("Data received:\n" + request.flag)
+	#			self.processRtspRequest(request)
 
-	def processRtspRequest(self, data):
+	def processRtspRequest(self):
 		"""Process RTSP request sent from the client."""
+		data = self.clientInfo["olyData"]
 
 		# Get the request type
 		requestType = data.flag
@@ -59,6 +60,10 @@ class ServerWorker:
 		# Get the RTSP sequence number
 		seq = data.payload["rtpsp_seq"]
 
+		# Get the ssrc
+		ssrc = data.payload["ssrc"]
+		self.nodePort = self.nodePort + ssrc
+		
 		# Process SETUP request
 		if requestType == self.SETUP:
 			if self.state == self.INIT:
@@ -93,7 +98,7 @@ class ServerWorker:
 
 				# Create a new thread and start sending RTP packets
 				self.clientInfo['event'] = threading.Event()
-				self.clientInfo['worker']= threading.Thread(target=self.sendRtp)
+				self.clientInfo['worker']= threading.Thread(target=self.sendRtp, args=[ssrc])
 				self.clientInfo['worker'].start()
 
 		# Process PAUSE request
