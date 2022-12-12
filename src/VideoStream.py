@@ -21,5 +21,13 @@ class VideoStream:
 	def frameNbr(self):
 		"""Get frame number."""
 		return self.frameNum
+
+	def reopen_stream(self):
+		try:
+			self.file = open(self.filename, 'rb')
+		except:
+			raise IOError
+		self.frameNum = 0
+
 	
 	

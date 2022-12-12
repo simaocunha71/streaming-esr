@@ -153,13 +153,14 @@ class oNode:
         source_ip = address[0]
         open_streams = self.streamsTable.get_streams()
 
-        rtpPakcet = RtpPacket()
-        rtpPakcet.decode(data)
-        ssrc = rtpPakcet.ssrc()
+        rtpPacket = RtpPacket()
+        rtpPacket.decode(data)
+        ssrc = rtpPacket.ssrc()
 
         #stream.source: endereços sao guardados inicialmente do sv para o cliente. Logo é necessário chamá-los pela ordem inversa
         for stream in open_streams:
             if stream.client == ssrc:
+                print("stream.client: " + str(stream.client) + " | SSRC: " + str(ssrc))
                 print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source)
                 self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
 

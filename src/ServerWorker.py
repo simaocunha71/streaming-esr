@@ -37,7 +37,7 @@ class ServerWorker:
 		threading.Thread(target=self.recvRtspRequest).start()
 
 	def recvRtspRequest(self):
-		"""Receive RTSP request from the client."""
+		"""Receive RTSP request from the client.""" 
 		connSocket = self.clientInfo['rtspSocket']
 		while True:
 			data = connSocket.recvfrom(256)
@@ -140,6 +140,8 @@ class ServerWorker:
 					print('-'*60)
 					traceback.print_exc(file=sys.stdout)
 					print('-'*60)
+			else:
+				self.clientInfo['videoStream'].reopen_stream() #Envia stream de video em loop
 					
 	def makeRtp(self, payload, frameNbr):
 		"""RTP-packetize the video data."""
