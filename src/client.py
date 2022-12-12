@@ -22,7 +22,7 @@ class Client:
 	PAUSE = 2
 	TEARDOWN = 3
 
-	def __init__(self, master, client_ip, nodeaddr,rtspSocket,rtspPort,rtpPort, filename, ssrc):
+	def __init__(self, master, nodeaddr,rtspSocket,rtspPort,rtpPort):
 		"""Client initialization"""
 		self.master = master
 		self.master.protocol("WM_DELETE_WINDOW", self.handler)
@@ -30,15 +30,12 @@ class Client:
 		self.nodeAddr = nodeaddr
 		self.rtspPort = int(rtspPort)
 		self.rtpPort = int(rtpPort)
-		self.fileName = filename
 		self.rtspSocket = rtspSocket
 		self.rtspSeq = 0
 		self.sessionId = 0
 		self.requestSent = -1
 		self.teardownAcked = 0
 		self.frameNbr = 0
-		self.client_ip = client_ip
-		self.ssrc = ssrc
 
 	def createWidgets(self):
 		"""Build GUI."""
@@ -195,20 +192,13 @@ class Client:
 
 
 		request = OlyPacket()
-		if(type_request == "SETUP"):
-			payload = {"file_name" : self.fileName, "rtpsp_seq" : self.rtspSeq, "rtp_port": self.rtpPort, "ssrc" : self.ssrc}
-			request = request.encode(type_request,payload)
+		request = request.encode(type_request, {})
 
-		elif(type_request == "PLAY" or type_request == "PAUSE" or type_request == "TEARDOWN"):
-			payload = {"file_name" : self.fileName, "rtpsp_seq" : self.rtspSeq, "ssrc" : self.ssrc}
-			request = request.encode(type_request,payload)
-
-		print("TYPEREQUEST: ")
-		print(type_request)
-		print("NODE ADDRESS: ")
-		print(self.nodeAddr)
 		# Send the RTSP request using rtspSocket.
 		self.rtspSocket.sendto(request,(self.nodeAddr,self.rtspPort))
+
+		if(self.requestSent == self.TEARDOWN):
+			os._exit(0)
 
 	def openRtpPort(self):
 		"""Open RTP socket binded to a specified port."""

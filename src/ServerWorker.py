@@ -23,14 +23,14 @@ class ServerWorker:
 	FILE_NOT_FOUND_404 = 1
 	CON_ERR_500 = 2
 
-	clientInfo = {}
-
-	def __init__(self,clientInfo,nodeAdrr,nodePort):
+	def __init__(self,nodeAdrr,nodePort, filename, UDPServerSocket):
 		"""Server Worker initialization"""
-		self.clientInfo = clientInfo
+		self.clientInfo = {}
 		# Endereço e porta de atendimento do vizinho do servidor
 		self.nodeAdrr = nodeAdrr
 		self.nodePort = nodePort
+		self.filename = filename
+		self.clientInfo["rtspSocket"] = UDPServerSocket
 
 	def run(self):
 		"""Server Worker into a thread"""
@@ -53,15 +53,6 @@ class ServerWorker:
 		# Get the request type
 		requestType = data.flag
 
-		# Get the media file name
-		filename = data.payload["file_name"]
-
-		# Get the RTSP sequence number
-		seq = data.payload["rtpsp_seq"]
-
-		# Get the ssrc
-		ssrc = data.payload["ssrc"]
-
 		# Process SETUP request
 		if requestType == self.SETUP:
 			if self.state == self.INIT:
@@ -69,19 +60,16 @@ class ServerWorker:
 				print("processing SETUP\n")
 
 				try:
-					self.clientInfo['videoStream'] = VideoStream(filename)
+					self.clientInfo['videoStream'] = VideoStream(self.filename)
 					self.state = self.READY
 				except IOError:
 					print("FILE_NOT_FOUND_404")
 
-				# Session id
-				self.clientInfo['session'] = ssrc
 
 				# Send RTSP reply
 				print("ok_200")
 
-				# Get the RTP/UDP port
-				self.clientInfo['rtpPort'] = data.payload["rtp_port"]
+
 
 		# Process PLAY request
 		elif requestType == self.PLAY:
@@ -96,7 +84,7 @@ class ServerWorker:
 
 				# Create a new thread and start sending RTP packets
 				self.clientInfo['event'] = threading.Event()
-				self.clientInfo['worker']= threading.Thread(target=self.sendRtp)
+				self.clientInfo['worker'] = threading.Thread(target=self.sendRtp)
 				self.clientInfo['worker'].start()
 
 		# Process PAUSE request
@@ -152,7 +140,7 @@ class ServerWorker:
 		marker = 0
 		pt = 26 # MJPEG type
 		seqnum = frameNbr
-		ssrc = self.clientInfo['session'] # Identifica a que cliente o pacote pertence
+		ssrc = 0 
 
 		rtpPacket = RtpPacket()
 

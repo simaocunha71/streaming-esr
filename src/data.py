@@ -57,10 +57,9 @@ class OverlayTable:
 
 # Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
 class Stream:
-    def __init__(self,source,destination,ssrc):
+    def __init__(self,source,destination):
         self.source = source
         self.destination = destination
-        self.client = ssrc
         self.state = "closed"
 
 
@@ -71,39 +70,69 @@ class StreamsTable:
     def __init__(self):
         self.lock = Lock()
         self.streams = []
+        self.status = "closed"
 
-    def add_stream(self,source,destination,ssrc):
+    def is_empty(self):
         self.lock.acquire()
         try:
-            new_stream = Stream(source,destination,ssrc)
+            return len(self.streams) == 0
+        finally:
+            self.lock.release()
+        
+
+    def stream_table_status(self):
+        self.lock.acquire()
+        try:
+            return self.status
+        finally:
+            self.lock.release()
+
+    def add_stream(self,source,destination):
+        self.lock.acquire()
+        try:
+            new_stream = Stream(source,destination)
             self.streams.append(new_stream)
         finally:
             self.lock.release()
 
-    def open_stream(self,ssrc):
+    def open_stream(self,source):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.client==ssrc):
+                if(stream.source==source):
                     stream.state = "open"
+                    if(self.status != "open"):
+                        self.status = "open"
         finally:
             self.lock.release()
 
-    def close_stream(self,ssrc):
+    def check_status(self):
+        close = True
+        for stream in self.streams:
+            if(stream.state == "open"):
+                close  = False
+        if(close):
+            self.status = "closed"
+
+
+    def close_stream(self,source):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.client==ssrc):
+                if(stream.source==source):
                     stream.state = "closed"
+            self.check_status()
         finally:
             self.lock.release()
 
-    def delete_stream(self,ssrc):
+    def delete_stream(self,source):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.client==ssrc):
+                if(stream.source==source):
                     self.streams.remove(stream)
+            if(self.status != "closed"):
+                self.check_status()
         finally:
             self.lock.release()
 

@@ -29,9 +29,8 @@ def Oly_handler(bytesAddressPair):
 if __name__ == "__main__":
     try:
         bootstrapperAddr = sys.argv[1]
-        fileName = sys.argv[2]
     except:
-        print("[Usage: ClientLauncher.py bootstrapperAddr Video_file]\n")
+        print("[Usage: ClientLauncher.py bootstrapperAddr]\n")
 
     print("------------CLI------------")
     # Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
@@ -51,9 +50,7 @@ if __name__ == "__main__":
 
     bytesAddressPair = UDPServerSocket.recvfrom(1024)
     data = Oly_handler(bytesAddressPair)
-    neighbours = data[:-2]
-    ip = data[-2]
-    ssrc = data[-1]
+    neighbours = data[:-1]
     #thread = Thread(target=Oly_handler,args=(bytesAddressPair))
     #thread.start()
 
@@ -62,6 +59,6 @@ if __name__ == "__main__":
 
     # Create a new client
     print(neighbours)
-    app = Client(root, ip, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT, fileName, ssrc)
+    app = Client(root, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT)
     app.master.title("RTPClient")
     root.mainloop()

@@ -14,8 +14,6 @@ bufferSize_rtp = 20480
 bufferSize_oly = bufferSize_bs = 1024
 RTP_PORT = 9999
 OLY_PORT = 5555
-ssrc_bytes = 6
-ssrc_numbers = 2**ssrc_bytes
 
 class oNode:
     def __init__(self, isBootstrapper, bootstrapperAddressPort):
@@ -26,7 +24,6 @@ class oNode:
         self.streamsTable = StreamsTable()
         if(self.isBootstrapper == True):
             self.olytable = OverlayTable()
-            self.uniqueSSRC = []
 
     def activeNode_handler(self, bytesAddressPair):
         #print("DISPLAY2")
@@ -42,13 +39,8 @@ class oNode:
             print("Recebi mensagem hello | IP: " + ip)
             # Ir buscar os vizinhos do nodo que se ligou
             neighbours = self.olytable.get_neighbours(ip)
-            ssrc = random.randint(1, ssrc_numbers-1)
-            while(ssrc in self.uniqueSSRC):
-                ssrc = random.randint(1, ssrc_numbers-1)
-            self.uniqueSSRC.append(ssrc)
             data = neighbours
             data.append(ip)
-            data.append(ssrc)
 
             hello_response_packet = OlyPacket()
 
@@ -76,9 +68,8 @@ class oNode:
             print("Vizinhos")
             print(olypacket.payload)
             data = olypacket.payload
-            self.neighbours = data[:-2]
-            self.ip = data[-2]
-            self.sessionId = data[-1]
+            self.neighbours = data[:-1]
+            self.ip = data[-1]
 
         # Pacote de proba
         elif olypacket.flag=="P":
@@ -120,30 +111,52 @@ class oNode:
             destination_ip = self.routingTable.next_jump()
             print("FLAG:")
             print(olypacket.flag)
-            ssrc = olypacket.payload["ssrc"]
             if olypacket.flag=="SETUP":
-                print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip + "| ssrc: " + str(ssrc))
+                print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
                 # Preciso implementar mensagens de proba para conseguirmos saber isto
                 # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
-                self.streamsTable.add_stream(source_ip,destination_ip,ssrc)
+                first_stream = self.streamsTable.is_empty()
+                self.streamsTable.add_stream(source_ip,destination_ip)
+
+                if(first_stream):
+                    self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
             elif olypacket.flag == "PLAY":
-                print("Fluxo ativo | ssrc: "+ str(ssrc))
-                self.streamsTable.open_stream(ssrc)
+                print("Fluxo ativo")
+                old_status = self.streamsTable.stream_table_status()
+                self.streamsTable.open_stream(source_ip)
+                new_status = self.streamsTable.stream_table_status()
+
+                if(old_status != new_status):
+                    self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
             elif olypacket.flag == "PAUSE":
-                print("Fluxo pausado | ssrc: "+ str(ssrc))
+                print("Fluxo pausado")
                 # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
-                self.streamsTable.close_stream(ssrc)
+                old_status = self.streamsTable.stream_table_status()
+                self.streamsTable.close_stream(source_ip)
+                new_status = self.streamsTable.stream_table_status()
+
+                if(old_status != new_status):
+                    self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
             elif olypacket.flag == "TEARDOWN":
-                print("Fluxo fechado | ssrc: "+ str(ssrc))
+                print("Fluxo fechado")
                 # Passar pacote ao próximo nodo
 
+                old_status = self.streamsTable.stream_table_status()
                 # Remover fluxo da tabela de rotas
-                self.streamsTable.delete_stream(ssrc)
+                self.streamsTable.delete_stream(source_ip)
+                new_status = self.streamsTable.stream_table_status()
 
-            self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+                empty = self.streamsTable.is_empty()
+
+                if(empty):
+                    self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+                elif(old_status != new_status):
+                    msg = olypacket.encode("PAUSE", "")
+                    self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+            
 
     def Rtp_handler(self, address,data):
         # RTP redirect
@@ -153,16 +166,10 @@ class oNode:
         source_ip = address[0]
         open_streams = self.streamsTable.get_streams()
 
-        rtpPacket = RtpPacket()
-        rtpPacket.decode(data)
-        ssrc = rtpPacket.ssrc()
-
         #stream.source: endereços sao guardados inicialmente do sv para o cliente. Logo é necessário chamá-los pela ordem inversa
         for stream in open_streams:
-            if stream.client == ssrc:
-                print("stream.client: " + str(stream.client) + " | SSRC: " + str(ssrc))
-                print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source)
-                self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
+            print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source)
+            self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
 
 
     # Listening for OlyPacket
