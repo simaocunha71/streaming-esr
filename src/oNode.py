@@ -26,6 +26,7 @@ class oNode:
         self.streamsTable = StreamsTable()
         if(self.isBootstrapper == True):
             self.olytable = OverlayTable()
+            self.uniqueSSRC = []
 
     def activeNode_handler(self, bytesAddressPair):
         #print("DISPLAY2")
@@ -41,8 +42,13 @@ class oNode:
             print("Recebi mensagem hello | IP: " + ip)
             # Ir buscar os vizinhos do nodo que se ligou
             neighbours = self.olytable.get_neighbours(ip)
-            ssrc = random.randint(0, ssrc_numbers-1)
-            data = neighbours.append(ip).append(ssrc)
+            ssrc = random.randint(1, ssrc_numbers-1)
+            while(ssrc in self.uniqueSSRC):
+                ssrc = random.randint(1, ssrc_numbers-1)
+            self.uniqueSSRC.append(ssrc)
+            data = neighbours
+            data.append(ip)
+            data.append(ssrc)
 
             hello_response_packet = OlyPacket()
 
@@ -116,22 +122,22 @@ class oNode:
             print(olypacket.flag)
             ssrc = olypacket.payload["ssrc"]
             if olypacket.flag=="SETUP":
-                print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip + "| ssrc: " + ssrc)
+                print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip + "| ssrc: " + str(ssrc))
                 # Preciso implementar mensagens de proba para conseguirmos saber isto
                 # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
                 self.streamsTable.add_stream(source_ip,destination_ip,ssrc)
 
             elif olypacket.flag == "PLAY":
-                print("Fluxo ativo | ssrc: "+ ssrc)
+                print("Fluxo ativo | ssrc: "+ str(ssrc))
                 self.streamsTable.open_stream(ssrc)
 
             elif olypacket.flag == "PAUSE":
-                print("Fluxo pausado | ssrc: "+ ssrc)
+                print("Fluxo pausado | ssrc: "+ str(ssrc))
                 # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
                 self.streamsTable.close_stream(ssrc)
 
-            elif requestType == "TEARDOWN":
-                print("Fluxo fechado | ssrc: "+ ssrc)
+            elif olypacket.flag == "TEARDOWN":
+                print("Fluxo fechado | ssrc: "+ str(ssrc))
                 # Passar pacote ao próximo nodo
 
                 # Remover fluxo da tabela de rotas

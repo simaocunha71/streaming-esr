@@ -89,7 +89,7 @@ class StreamsTable:
         finally:
             self.lock.release()
 
-    def close_stream(self,client_ip):
+    def close_stream(self,ssrc):
         self.lock.acquire()
         try:
             for stream in self.streams:
@@ -98,7 +98,7 @@ class StreamsTable:
         finally:
             self.lock.release()
 
-    def delete_stream(self,client_ip):
+    def delete_stream(self,ssrc):
         self.lock.acquire()
         try:
             for stream in self.streams:

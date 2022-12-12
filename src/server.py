@@ -112,12 +112,13 @@ if __name__ == "__main__":
             bytesAddressPair = UDPServerSocket.recvfrom(rtsp_bufferSize)
             data = bytesAddressPair[0]
             data_decoded = OlyPacket()
-            data_decoded = data.decode(data)
+            data_decoded = data_decoded.decode(data)
 
-            server_worker_port = RTP_PORT + data_decoded['ssrc']
+            server_worker_port = RTP_PORT + data_decoded.payload['ssrc']
+            print("server_worker_port -> " + str(server_worker_port))
 
             # Dar setup, correr server worker na porta RTP_Port + ssrc
-            if data.flag == 'SETUP':
+            if data_decoded.flag == 'SETUP':
                 rtspSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
                 rtspSocket.bind(('',server_worker_port))
                 clientInfo = {}
