@@ -96,8 +96,6 @@ if __name__ == "__main__":
         print("Vizinhos")
         print(neighbours)
 
-
-
         # Cria mensagem de proba
         probe_message = OlyPacket()
         timestamp = datetime.now()
@@ -109,10 +107,22 @@ if __name__ == "__main__":
         # Envia mensagem de proba para o vizinho (o servidor só tem um vizinho)
         UDPClientSocket.sendto(probe_message,(neighbours[0]['node_ip'],OLY_PORT))
 
+        # Servidor escuta por novos pedidos cliente
         while True:
             bytesAddressPair = UDPServerSocket.recvfrom(rtsp_bufferSize)
-            data = OlyPacket()
-            data = data.decode(bytesAddressPair[0])
-            clientInfo = {}
-            clientInfo['olyData'] = data
-            ServerWorker(clientInfo,neighbours[0]["node_ip"],RTP_PORT).run()
+            data = bytesAddressPair[0]
+            data_decoded = OlyPacket()
+            data_decoded = data.decode(data)
+
+            server_worker_port = RTP_PORT + data_decoded['ssrc']
+
+            # Dar setup, correr server worker na porta RTP_Port + ssrc
+            if data.flag == 'SETUP':
+                rtspSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+                rtspSocket.bind(('',server_worker_port))
+                clientInfo = {}
+                clientInfo['rtspSocket'] = rtspSocket
+                ServerWorker(clientInfo,neighbours[0]["node_ip"],RTP_PORT).run()
+
+            # Redirecionar o pacote de dados para o pacote em que o o server worker está à escuta
+            UDPClientSocket.sendto(data,('',server_worker_port))

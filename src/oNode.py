@@ -7,6 +7,7 @@ import random
 from datetime import datetime
 from OlyPacket import *
 from data import *
+from RtpPacket import RtpPacket
 
 listening_port = 0
 bufferSize_rtp = 20480
@@ -40,7 +41,7 @@ class oNode:
             print("Recebi mensagem hello | IP: " + ip)
             # Ir buscar os vizinhos do nodo que se ligou
             neighbours = self.olytable.get_neighbours(ip)
-            ssrc = random.randint(0, ssrc_numbers-1) 
+            ssrc = random.randint(0, ssrc_numbers-1)
             data = neighbours.append(ip).append(ssrc)
 
             hello_response_packet = OlyPacket()
@@ -85,7 +86,7 @@ class oNode:
 
             # Número de saltos do servidor até o nodo atual
             saltos = olypacket.payload[1] + 1
-            
+
             # IP de quem enviou pacote de probe
             probe_source_ip = olypacket.payload[2]
 
@@ -118,7 +119,7 @@ class oNode:
                 print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip + "| ssrc: " + ssrc)
                 # Preciso implementar mensagens de proba para conseguirmos saber isto
                 # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
-                self.streamsTable.add_stream(source_ip,destination_ip, ssrc)
+                self.streamsTable.add_stream(source_ip,destination_ip,ssrc)
 
             elif olypacket.flag == "PLAY":
                 print("Fluxo ativo | ssrc: "+ ssrc)
@@ -146,10 +147,15 @@ class oNode:
         source_ip = address[0]
         open_streams = self.streamsTable.get_streams()
 
+        rtpPakcet = RtpPacket()
+        rtpPakcet.decode(data)
+        ssrc = rtpPakcet.ssrc()
+
         #stream.source: endereços sao guardados inicialmente do sv para o cliente. Logo é necessário chamá-los pela ordem inversa
         for stream in open_streams:
-            print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source) 
-            self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
+            if stream.client == ssrc:
+                print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source)
+                self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
 
 
     # Listening for OlyPacket
@@ -177,7 +183,7 @@ class oNode:
 
     def service_Rtp(self):
        self.rtpServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    
+
        # A porta para escutar pacotes rtp é fixa
        self.rtpServerSocket.bind(('',RTP_PORT))
        self.rtpClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)

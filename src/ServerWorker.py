@@ -34,22 +34,21 @@ class ServerWorker:
 
 	def run(self):
 		"""Server Worker into a thread"""
-		threading.Thread(target=self.processRtspRequest).start()
+		threading.Thread(target=self.recvRtspRequest).start()
 
-	#def recvRtspRequest(self):
-	#	"""Receive RTSP request from the client."""
-	#	connSocket = self.clientInfo['rtspSocket']
-	#	while True:
-	#		data = connSocket.recvfrom(256)
-	#		if data:
-	#			request = OlyPacket()
-	#			request = request.decode(data[0])
-	#			print("Data received:\n" + request.flag)
-	#			self.processRtspRequest(request)
+	def recvRtspRequest(self):
+		"""Receive RTSP request from the client."""
+		connSocket = self.clientInfo['rtspSocket']
+		while True:
+			data = connSocket.recvfrom(256)
+			if data:
+				request = OlyPacket()
+				request = request.decode(data[0])
+				print("Data received:\n" + request.flag)
+				self.processRtspRequest(request)
 
-	def processRtspRequest(self):
+	def processRtspRequest(self,data):
 		"""Process RTSP request sent from the client."""
-		data = self.clientInfo["olyData"]
 
 		# Get the request type
 		requestType = data.flag
@@ -62,8 +61,7 @@ class ServerWorker:
 
 		# Get the ssrc
 		ssrc = data.payload["ssrc"]
-		self.nodePort = self.nodePort + ssrc
-		
+
 		# Process SETUP request
 		if requestType == self.SETUP:
 			if self.state == self.INIT:
@@ -76,8 +74,8 @@ class ServerWorker:
 				except IOError:
 					print("FILE_NOT_FOUND_404")
 
-				# Generate a randomized RTSP session ID
-				self.clientInfo['session'] = randint(100000, 999999)
+				# Session id
+				self.clientInfo['session'] = ssrc
 
 				# Send RTSP reply
 				print("ok_200")
@@ -98,7 +96,7 @@ class ServerWorker:
 
 				# Create a new thread and start sending RTP packets
 				self.clientInfo['event'] = threading.Event()
-				self.clientInfo['worker']= threading.Thread(target=self.sendRtp, args=[ssrc])
+				self.clientInfo['worker']= threading.Thread(target=self.sendRtp)
 				self.clientInfo['worker'].start()
 
 		# Process PAUSE request
@@ -142,7 +140,7 @@ class ServerWorker:
 					print('-'*60)
 					traceback.print_exc(file=sys.stdout)
 					print('-'*60)
-
+					
 	def makeRtp(self, payload, frameNbr):
 		"""RTP-packetize the video data."""
 		version = 2
@@ -152,7 +150,7 @@ class ServerWorker:
 		marker = 0
 		pt = 26 # MJPEG type
 		seqnum = frameNbr
-		ssrc = 0
+		ssrc = self.clientInfo['session'] # Identifica a que cliente o pacote pertence
 
 		rtpPacket = RtpPacket()
 
