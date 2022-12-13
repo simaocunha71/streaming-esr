@@ -29,12 +29,20 @@ class ServerWorker:
 		# Endereço e porta de atendimento do vizinho do servidor
 		self.nodeAdrr = nodeAdrr
 		self.nodePort = nodePort
-		self.filename = filename
+		try:
+			self.clientInfo['videoStream'] = VideoStream(filename)
+		except IOError:
+			print("FILE_NOT_FOUND_404")
 		self.clientInfo["rtspSocket"] = UDPServerSocket
 
 	def run(self):
 		"""Server Worker into a thread"""
 		threading.Thread(target=self.recvRtspRequest).start()
+		
+		# Create a new thread and start sending RTP packets
+		self.clientInfo['event'] = threading.Event()
+		self.clientInfo['worker'] = threading.Thread(target=self.sendRtp)
+		self.clientInfo['worker'].start()
 
 	def recvRtspRequest(self):
 		"""Receive RTSP request from the client.""" 
@@ -58,13 +66,10 @@ class ServerWorker:
 			if self.state == self.INIT:
 				# Update state
 				print("processing SETUP\n")
-
-				try:
-					self.clientInfo['videoStream'] = VideoStream(self.filename)
-					self.state = self.READY
-				except IOError:
-					print("FILE_NOT_FOUND_404")
-
+				# Create a new socket for RTP/UDP
+				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+				
+				self.state = self.READY
 
 				# Send RTSP reply
 				print("ok_200")
@@ -77,15 +82,11 @@ class ServerWorker:
 				print("processing PLAY\n")
 				self.state = self.PLAYING
 
-				# Create a new socket for RTP/UDP
-				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 
 				print("ok_200")
 
-				# Create a new thread and start sending RTP packets
-				self.clientInfo['event'] = threading.Event()
-				self.clientInfo['worker'] = threading.Thread(target=self.sendRtp)
-				self.clientInfo['worker'].start()
+
 
 		# Process PAUSE request
 		elif requestType == self.PAUSE:
@@ -93,16 +94,12 @@ class ServerWorker:
 				print("processing PAUSE\n")
 				self.state = self.READY
 
-				self.clientInfo['event'].set()
-
 				print("ok_200")
 
 		# Process TEARDOWN request
 		elif requestType == self.TEARDOWN:
 			print("processing TEARDOWN\n")
-
-			self.clientInfo['event'].set()
-
+			self.state = self.INIT
 			print("ok_200")
 
 			# Close the RTP socket
@@ -112,16 +109,13 @@ class ServerWorker:
 		"""Send RTP packets over UDP."""
 		while True:
 			self.clientInfo['event'].wait(0.05)
-
-			# Stop sending if request is PAUSE or TEARDOWN
-			if self.clientInfo['event'].isSet():
-				break
-
 			data = self.clientInfo['videoStream'].nextFrame()
+
 			if data:
 				frameNumber = self.clientInfo['videoStream'].frameNbr()
 				try:
-					self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(self.nodeAdrr,self.nodePort))
+					if self.state == self.PLAYING:
+						self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(self.nodeAdrr,self.nodePort))
 				except Exception as e:
 					print("Connection Error")
 					print(e)

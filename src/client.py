@@ -6,7 +6,7 @@ import socket, threading, os
 from RtpPacket import RtpPacket
 from OlyPacket import OlyPacket
 
-CACHE_FILE_NAME = "cache-"
+CACHE_FILE_NAME = "cache"
 CACHE_FILE_EXT = ".jpg"
 
 class Client:
@@ -32,7 +32,6 @@ class Client:
 		self.rtpPort = int(rtpPort)
 		self.rtspSocket = rtspSocket
 		self.rtspSeq = 0
-		self.sessionId = 0
 		self.requestSent = -1
 		self.teardownAcked = 0
 		self.frameNbr = 0
@@ -78,8 +77,8 @@ class Client:
 		"""Teardown button handler."""
 		self.sendRtspRequest(self.TEARDOWN)
 		self.master.destroy() # Close the gui window
-		os.remove(CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT) # Delete the cache image from video
-		self.state = self.INIT
+		os.remove(CACHE_FILE_NAME + CACHE_FILE_EXT) # Delete the cache image from video
+		os._exit(0)
 
 	def pauseMovie(self):
 		"""Pause button handler."""
@@ -127,7 +126,7 @@ class Client:
 
 	def writeFrame(self, data):
 		"""Write the received frame to a temp image file. Return the image file."""
-		cachename = CACHE_FILE_NAME + str(self.sessionId) + CACHE_FILE_EXT
+		cachename = CACHE_FILE_NAME + CACHE_FILE_EXT
 		file = open(cachename, "wb")
 		file.write(data)
 		file.close()
@@ -196,9 +195,7 @@ class Client:
 
 		# Send the RTSP request using rtspSocket.
 		self.rtspSocket.sendto(request,(self.nodeAddr,self.rtspPort))
-
-		if(self.requestSent == self.TEARDOWN):
-			os._exit(0)
+			
 
 	def openRtpPort(self):
 		"""Open RTP socket binded to a specified port."""
