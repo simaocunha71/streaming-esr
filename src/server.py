@@ -41,7 +41,8 @@ if __name__ == "__main__":
 
         # Cria mensagem de proba
         probe_message = OlyPacket()
-        timestamp = datetime.now()
+        timestamp = datetime.now().strftime('%H:%M:%S.%f')
+        print(timestamp)
         saltos = 0
         data = [timestamp,saltos,server_ip]
         probe_message = probe_message.encode("P",data)

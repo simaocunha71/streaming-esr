@@ -25,12 +25,12 @@ class OlyPacket:
         pass
 
     def encode(self,type,payload):
-        data = flag + ";"
+        data = type + ";"
 
         if payload:
             # O payload tem que ser sempre uma lista
             for value in payload:
-                data += value + ","
+                data = data + str(value) + ","
 
             # Tira a virgula em excesso e acrescentar último separador
             data = data[:-1] + ";"
@@ -48,6 +48,6 @@ class OlyPacket:
         # Tipo o pacote
         self.type = data_fields[0]
         # Array com os valores o payload
-        self.payload = data_fields[1].slit(",")
+        self.payload = data_fields[1].split(",")
 
         return self

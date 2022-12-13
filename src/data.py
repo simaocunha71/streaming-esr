@@ -18,7 +18,7 @@ class OverlayTable:
             for group in self.groups:
                 if group["node_ip"] == ip:
                     for entry in group["neighbours"]:
-                        neighbours_list.append({ entry })
+                        neighbours_list.append(entry)
             return neighbours_list
         except Exception as e:
             print(e)

@@ -51,7 +51,7 @@ class ServerWorker:
 		"""Receive RTSP request from the client."""
 		connSocket = self.clientInfo['olySocket']
 		while True:
-			data = connSocket.recvfrom(OLY_BUFFER_SIZE)
+			data = connSocket.recvfrom(self.OLY_BUFFER_SIZE)
 			if data:
 				request = OlyPacket()
 				request = request.decode(data[0])

@@ -4,7 +4,7 @@ import sys
 import os
 import pickle
 import random
-from datetime import datetime
+from datetime import datetime, date
 from OlyPacket import *
 from data import *
 from RtpPacket import RtpPacket
@@ -73,17 +73,23 @@ class oNode:
             self.ip = data[-1]
 
         # Pacote de proba
-    elif olypacket.type=="P":
+        elif olypacket.type=="P":
             print("Recebi pacote de prova | IP: " + source_ip)
             now = datetime.now()
+            now = now.time()
+            print("NOW: ", end = "")
+            print(now)
 
             # Timestamp marcado no servidor
-            timestamp = olypacket.payload[0]
+            timestamp = datetime.strptime(olypacket.payload[0], '%H:%M:%S.%f').time()
+            print("TIMESTAMP: ", end="")
+            print(timestamp)
 
-            delta = now - timestamp
+
+            delta = datetime.combine(date.today(), now) - datetime.combine(date.today(), timestamp)
 
             # Número de saltos do servidor até o nodo atual
-            saltos = olypacket.payload[1] + 1
+            saltos = int(olypacket.payload[1]) + 1
 
             # IP de quem enviou pacote de probe
             probe_source_ip = olypacket.payload[2]
