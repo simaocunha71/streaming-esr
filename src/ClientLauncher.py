@@ -4,6 +4,8 @@ from tkinter import Tk
 from client import Client
 from OlyPacket import OlyPacket
 
+OLY_BUFFER_SIZE = 250
+
 RTP_PORT = 9999
 OLY_PORT = 5555
 
@@ -16,7 +18,7 @@ def Oly_handler(bytesAddressPair):
     olypacket = olypacket.decode(msg)
 
     # Pacote Hello Response
-    if olypacket.flag=="HR":
+    if olypacket.type=="HR":
         # O payload é os vizinhos do nodo
         print("Vizinhos")
         print(olypacket.payload)
@@ -41,14 +43,14 @@ if __name__ == "__main__":
 
 
     hello_packet = OlyPacket()
-    encoded_packet = hello_packet.encode("H","")
+    encoded_packet = hello_packet.encode("H",[])
 
     # Cliente envia mensagem de Hello ao bootstrapper para saber a quem se ligar
     UDPClientSocket.sendto(encoded_packet,(bootstrapperAddr,OLY_PORT))
 
     # Recebe respostas do bootstrapper
 
-    bytesAddressPair = UDPServerSocket.recvfrom(1024)
+    bytesAddressPair = UDPServerSocket.recvfrom(OLY_BUFFER_SIZE)
     data = Oly_handler(bytesAddressPair)
     neighbours = data[:-1]
     #thread = Thread(target=Oly_handler,args=(bytesAddressPair))
@@ -59,6 +61,6 @@ if __name__ == "__main__":
 
     # Create a new client
     print(neighbours)
-    app = Client(root, neighbours[0]['node_ip'],UDPServerSocket,OLY_PORT, RTP_PORT)
+    app = Client(root, neighbours[0],UDPServerSocket,OLY_PORT, RTP_PORT)
     app.master.title("RTPClient")
     root.mainloop()

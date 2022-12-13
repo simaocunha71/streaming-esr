@@ -18,7 +18,7 @@ class OverlayTable:
             for group in self.groups:
                 if group["node_ip"] == ip:
                     for entry in group["neighbours"]:
-                        neighbours_list.append({ "node_ip" : entry })
+                        neighbours_list.append({ entry })
             return neighbours_list
         except Exception as e:
             print(e)
@@ -78,7 +78,7 @@ class StreamsTable:
             return len(self.streams) == 0
         finally:
             self.lock.release()
-        
+
 
     def stream_table_status(self):
         self.lock.acquire()

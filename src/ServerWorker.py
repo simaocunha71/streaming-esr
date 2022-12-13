@@ -18,12 +18,15 @@ class ServerWorker:
 	PLAYING = 2
 	state = INIT
 
+	# Buffer
+	OLY_BUFFER_SIZE = 250
+
 	#Sucess/Error codes
 	OK_200 = 0
 	FILE_NOT_FOUND_404 = 1
 	CON_ERR_500 = 2
 
-	def __init__(self,nodeAdrr,nodePort, filename, UDPServerSocket):
+	def __init__(self,nodeAdrr,nodePort, filename, olySocket):
 		"""Server Worker initialization"""
 		self.clientInfo = {}
 		# Endereço e porta de atendimento do vizinho do servidor
@@ -33,33 +36,33 @@ class ServerWorker:
 			self.clientInfo['videoStream'] = VideoStream(filename)
 		except IOError:
 			print("FILE_NOT_FOUND_404")
-		self.clientInfo["rtspSocket"] = UDPServerSocket
+		self.clientInfo["olySocket"] = olySocket
 
 	def run(self):
 		"""Server Worker into a thread"""
 		threading.Thread(target=self.recvRtspRequest).start()
-		
+
 		# Create a new thread and start sending RTP packets
 		self.clientInfo['event'] = threading.Event()
 		self.clientInfo['worker'] = threading.Thread(target=self.sendRtp)
 		self.clientInfo['worker'].start()
 
 	def recvRtspRequest(self):
-		"""Receive RTSP request from the client.""" 
-		connSocket = self.clientInfo['rtspSocket']
+		"""Receive RTSP request from the client."""
+		connSocket = self.clientInfo['olySocket']
 		while True:
-			data = connSocket.recvfrom(256)
+			data = connSocket.recvfrom(OLY_BUFFER_SIZE)
 			if data:
 				request = OlyPacket()
 				request = request.decode(data[0])
-				print("Data received:\n" + request.flag)
+				print("Data received:\n" + request.type)
 				self.processRtspRequest(request)
 
 	def processRtspRequest(self,data):
 		"""Process RTSP request sent from the client."""
 
 		# Get the request type
-		requestType = data.flag
+		requestType = data.type
 
 		# Process SETUP request
 		if requestType == self.SETUP:
@@ -68,7 +71,7 @@ class ServerWorker:
 				print("processing SETUP\n")
 				# Create a new socket for RTP/UDP
 				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-				
+
 				self.state = self.READY
 
 				# Send RTSP reply
@@ -124,7 +127,7 @@ class ServerWorker:
 					print('-'*60)
 			else:
 				self.clientInfo['videoStream'].reopen_stream() #Envia stream de video em loop
-					
+
 	def makeRtp(self, payload, frameNbr):
 		"""RTP-packetize the video data."""
 		version = 2
@@ -134,7 +137,7 @@ class ServerWorker:
 		marker = 0
 		pt = 26 # MJPEG type
 		seqnum = frameNbr
-		ssrc = 0 
+		ssrc = 0
 
 		rtpPacket = RtpPacket()
 

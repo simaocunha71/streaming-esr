@@ -9,9 +9,9 @@ from OlyPacket import *
 from data import *
 from RtpPacket import RtpPacket
 
-listening_port = 0
-bufferSize_rtp = 20480
-bufferSize_oly = bufferSize_bs = 1024
+RTP_BUFFER_SIZE = 20480
+OLY_BUFFER_SIZE = 250
+
 RTP_PORT = 9999
 OLY_PORT = 5555
 
@@ -35,7 +35,7 @@ class oNode:
         hello_packet = OlyPacket()
         hello_packet = hello_packet.decode(msg)
 
-        if hello_packet.flag=="H":
+        if hello_packet.type=="H":
             print("Recebi mensagem hello | IP: " + ip)
             # Ir buscar os vizinhos do nodo que se ligou
             neighbours = self.olytable.get_neighbours(ip)
@@ -60,19 +60,20 @@ class oNode:
         olypacket = olypacket.decode(msg)
 
         print("IP de origem " + source_ip)
-        print("OLYPacket FLAG: " + olypacket.flag)
+        print("OLYPacket FLAG: " + olypacket.type)
 
         # Pacote Hello Response
-        if olypacket.flag=="HR":
+        if olypacket.type=="HR":
             # O payload é os vizinhos do nodo
             print("Vizinhos")
             print(olypacket.payload)
+
             data = olypacket.payload
             self.neighbours = data[:-1]
             self.ip = data[-1]
 
         # Pacote de proba
-        elif olypacket.flag=="P":
+    elif olypacket.type=="P":
             print("Recebi pacote de prova | IP: " + source_ip)
             now = datetime.now()
 
@@ -94,7 +95,7 @@ class oNode:
             self.routingTable.print()
 
             # Data a enviar aos nodos viznhos
-            data = [timestamp,saltos, self.ip]
+            data = [timestamp,saltos,self.ip]
 
             prob_packet = OlyPacket()
             encoded_prob_packet = prob_packet.encode("P",data)
@@ -102,16 +103,14 @@ class oNode:
             # O nodo envia mensagem de proba a todos os seus vizinhos ativos
             print("Envio probe para os vizinhos")
             for elem in self.neighbours:
-                print("NodeIP: " + elem['node_ip'] + " | SOURCEIP: " + source_ip)
-                if elem['node_ip'] != probe_source_ip:
-                    self.olyClientSocket.sendto(encoded_prob_packet,(elem['node_ip'],OLY_PORT))
+                print("NodeIP: " + elem + " | SOURCEIP: " + source_ip)
+                if elem != probe_source_ip:
+                    self.olyClientSocket.sendto(encoded_prob_packet,(elem,OLY_PORT))
         else:
-            print("Recebi \"else\"")
             self.routingTable.print()
             destination_ip = self.routingTable.next_jump()
-            print("FLAG:")
-            print(olypacket.flag)
-            if olypacket.flag=="SETUP":
+
+            if olypacket.type=="SETUP":
                 print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
                 # Preciso implementar mensagens de proba para conseguirmos saber isto
                 # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
@@ -121,7 +120,7 @@ class oNode:
                 if(first_stream):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
-            elif olypacket.flag == "PLAY":
+            elif olypacket.type == "PLAY":
                 print("Fluxo ativo")
                 old_status = self.streamsTable.stream_table_status()
                 self.streamsTable.open_stream(source_ip)
@@ -130,7 +129,7 @@ class oNode:
                 if(old_status != new_status):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
-            elif olypacket.flag == "PAUSE":
+            elif olypacket.type == "PAUSE":
                 print("Fluxo pausado")
                 # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
                 old_status = self.streamsTable.stream_table_status()
@@ -140,7 +139,7 @@ class oNode:
                 if(old_status != new_status):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
 
-            elif olypacket.flag == "TEARDOWN":
+            elif olypacket.type == "TEARDOWN":
                 print("Fluxo fechado")
                 # Passar pacote ao próximo nodo
 
@@ -154,9 +153,9 @@ class oNode:
                 if(empty):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
                 elif(old_status != new_status):
-                    msg = olypacket.encode("PAUSE", "")
+                    msg = olypacket.encode("PAUSE",[])
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
-            
+
 
     def Rtp_handler(self, address,data):
         # RTP redirect
@@ -186,7 +185,7 @@ class oNode:
         self.olyClientSocket.sendto(encoded_packet, self.bootstrapperAddressPort)
 
         while(True):
-            bytesAddressPair = self.olyServerSocket.recvfrom(bufferSize_oly)
+            bytesAddressPair = self.olyServerSocket.recvfrom(OLY_BUFFER_SIZE)
 
             # Aqui chamamos um handler para interpretar a msg e agir de acordo
             thread = Thread(target=self.Oly_handler,args=[bytesAddressPair])
@@ -203,7 +202,7 @@ class oNode:
        self.rtpClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
        while(True):
-           bytesAddressPair = self.rtpServerSocket.recvfrom(bufferSize_rtp)
+           bytesAddressPair = self.rtpServerSocket.recvfrom(RTP_BUFFER_SIZE)
            data = bytesAddressPair[0]
            address = bytesAddressPair[1]
 
@@ -221,7 +220,7 @@ class oNode:
        self.olyServerSocket.bind(('',OLY_PORT))
 
        while(True):
-           bytesAddressPair = self.olyServerSocket.recvfrom(bufferSize_bs)
+           bytesAddressPair = self.olyServerSocket.recvfrom(OLY_BUFFER_SIZE)
 
             # Aqui chamamos um handler para interpretar a msg e agir de acordo
            thread = Thread(target=self.activeNode_handler,args=[bytesAddressPair])
