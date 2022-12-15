@@ -11,7 +11,7 @@ OLY_BUFFER_SIZE = 250
 OLY_PORT = 5555
 RTP_PORT = 9999
 
-PERIODIC_MONITORIZATION_TIME = 10 #segundos
+PERIODIC_MONITORIZATION_TIME = 5 #segundos
 
 def sendProbeMessage(server_ip, node_ip):
     while True:

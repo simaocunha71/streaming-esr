@@ -27,7 +27,7 @@ class VideoStream:
 			self.file = open(self.filename, 'rb')
 		except:
 			raise IOError
-		self.frameNum = 0
+		#self.frameNum = 0
 
 	
 	

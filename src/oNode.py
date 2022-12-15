@@ -1,5 +1,5 @@
 import socket
-from threading import Thread
+from threading import Thread, Lock
 import sys
 import os
 import pickle
@@ -43,6 +43,8 @@ class oNode:
         self.state = "closed"
         if(self.isBootstrapper == True):
             self.olytable = OverlayTable()
+        else:
+            self.lock = Lock()
 
     def activeNode_handler(self, bytesAddressPair):
         #print("DISPLAY2")
@@ -105,7 +107,7 @@ class oNode:
             # IP de quem enviou pacote de probe
             probe_source_ip = olypacket.payload[2]
 
-
+            self.lock.acquire()
             old_source = self.route.source
             updated = self.route.updateRoute(probe_source_ip, saltos, delta, datetime.combine(date.today(), now))
             new_source = self.route.source
@@ -139,21 +141,25 @@ class oNode:
                     #print("NodeIP: " + elem + " | SOURCEIP: " + source_ip)
                     if elem != probe_source_ip:
                         self.olyClientSocket.sendto(encoded_prob_packet,(elem,OLY_PORT))
+            self.lock.release()
         else:
             destination_ip = self.route.source
 
             if olypacket.type=="SETUP":
                 print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)
+                self.lock.acquire()
                 # Preciso implementar mensagens de proba para conseguirmos saber isto
                 # Adicionar um fluxo à routing table falta passar o source (novo vizinho que pediu stream) e dest (novo vizinho a qual o novo atual passa stream)
                 first_stream = self.streamsTable.is_empty()
-                self.streamsTable.add_stream(source_ip,destination_ip)
+                self.streamsTable.add_stream(source_ip)
 
                 if(first_stream):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+                self.lock.release()
 
             elif olypacket.type == "PLAY":
                 print("Fluxo ativo")
+                self.lock.acquire()
                 self.state = "open"
                 old_status = self.streamsTable.stream_table_status()
                 self.streamsTable.open_stream(source_ip)
@@ -162,9 +168,11 @@ class oNode:
                 if(old_status != new_status):
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
                     print("sending PLAY to " + destination_ip)
+                self.lock.release()
 
             elif olypacket.type == "PAUSE":
                 print("Fluxo pausado")
+                self.lock.acquire()
                 # Fecha o fluxo pois o nodo vizinhos(source_ip) não quer stream
                 old_status = self.streamsTable.stream_table_status()
                 self.streamsTable.close_stream(source_ip)
@@ -173,10 +181,12 @@ class oNode:
                 if(old_status != new_status):
                     self.state = "closed"
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+                self.lock.release()
 
             elif olypacket.type == "TEARDOWN":
                 print("Fluxo fechado")
                 # Passar pacote ao próximo nodo
+                self.lock.acquire()
 
                 old_status = self.streamsTable.stream_table_status()
                 # Remover fluxo da tabela de rotas
@@ -192,6 +202,7 @@ class oNode:
                     self.state = "closed"
                     msg = olypacket.encode("PAUSE",[])
                     self.olyClientSocket.sendto(msg,(destination_ip,OLY_PORT))
+                self.lock.release()
 
 
     def Rtp_handler(self, address,data):
@@ -199,13 +210,15 @@ class oNode:
         # Pacote de stream
 
         # Ip de onde veio o pedido
-        source_ip = address[0]
+        #source_ip = address[0]
         open_streams = self.streamsTable.get_streams()
 
+        self.lock.acquire()
         #stream.source: endereços sao guardados inicialmente do sv para o cliente. Logo é necessário chamá-los pela ordem inversa
         for stream in open_streams:
             #print("Redirecionei pacote de stream " + source_ip + " -> " + stream.source)
-            self.rtpClientSocket.sendto(data,(stream.source,RTP_PORT))
+            self.rtpClientSocket.sendto(data,(stream.destination,RTP_PORT))
+        self.lock.release()
 
 
     # Listening for OlyPacket

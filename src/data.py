@@ -57,11 +57,9 @@ class OverlayTable:
 
 # Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
 class Stream:
-    def __init__(self,source,destination):
-        self.source = source
+    def __init__(self,destination):
         self.destination = destination
         self.state = "closed"
-
 
 
 # Table de routing, guarda conjunto de streams num nodo
@@ -87,19 +85,19 @@ class StreamsTable:
         finally:
             self.lock.release()
 
-    def add_stream(self,source,destination):
+    def add_stream(self,destination):
         self.lock.acquire()
         try:
-            new_stream = Stream(source,destination)
+            new_stream = Stream(destination)
             self.streams.append(new_stream)
         finally:
             self.lock.release()
 
-    def open_stream(self,source):
+    def open_stream(self,destination):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.destination==destination):
                     stream.state = "open"
                     if(self.status != "open"):
                         self.status = "open"
@@ -115,21 +113,21 @@ class StreamsTable:
             self.status = "closed"
 
 
-    def close_stream(self,source):
+    def close_stream(self,destination):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.destination==destination):
                     stream.state = "closed"
             self.check_status()
         finally:
             self.lock.release()
 
-    def delete_stream(self,source):
+    def delete_stream(self,destination):
         self.lock.acquire()
         try:
             for stream in self.streams:
-                if(stream.source==source):
+                if(stream.destination==destination):
                     print("REMOVE")
                     self.streams.remove(stream)
             if(self.status != "closed"):
