@@ -12,6 +12,8 @@ from RtpPacket import RtpPacket
 RTP_BUFFER_SIZE = 20480
 RTP_PORT = 9999
 MAX_DELTA = timedelta(days = 1)
+MIN_DELTA = timedelta(milliseconds = 200)
+ZERO_DELTA = timedelta(microseconds = 1)
 VALIDATE_TIME = timedelta(seconds = 10)
 
 class Route:
@@ -22,7 +24,14 @@ class Route:
         self.time = datetime.combine(date.today(), time)
 
     def update_route(self,source,saltos,delta, time):
-        if(time - self.time >= VALIDATE_TIME or delta < self.delta): #Ou recebe uma rota melhor ou o rota expirou
+        difSaltos = saltos - self.saltos * 0.20
+        difTime = time - self.time
+        difDelta = delta - self.delta
+        #Dá update à rota se:
+            #O tempo de validade tiver expirado, ou
+            #Houver redução de saltos e tiver melhora de tempo, ou
+            #Tiver melhora de tempo significativa (MIN_DELTA)
+        if(difTime >= VALIDATE_TIME or (difDelta >= ZERO_DELTA and difSaltos > 0) or difDelta > MIN_DELTA): #Ou recebe uma rota melhor ou o rota expirou
             self.delta = delta
             self.source = source
             self.saltos = saltos
