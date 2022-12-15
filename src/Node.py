@@ -24,7 +24,7 @@ class Route:
         self.time = datetime.combine(date.today(), time)
 
     def update_route(self,source,saltos,delta, time):
-        difSaltos = saltos - self.saltos * 0.20
+        difSaltos = saltos - self.saltos
         difTime = time - self.time
         difDelta = delta - self.delta
         #Dá update à rota se:
