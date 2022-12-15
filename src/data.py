@@ -130,6 +130,7 @@ class StreamsTable:
         try:
             for stream in self.streams:
                 if(stream.source==source):
+                    print("REMOVE")
                     self.streams.remove(stream)
             if(self.status != "closed"):
                 self.check_status()

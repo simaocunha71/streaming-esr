@@ -63,7 +63,7 @@ class ServerWorker:
 
 		# Get the request type
 		requestType = data.type
-
+		print("PROCESS REQUEST")
 		# Process SETUP request
 		if requestType == self.SETUP:
 			if self.state == self.INIT:
@@ -85,9 +85,10 @@ class ServerWorker:
 				print("processing PLAY\n")
 				self.state = self.PLAYING
 
-
-
 				print("ok_200")
+			else:
+				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+				self.state = self.PLAYING
 
 
 
@@ -98,15 +99,17 @@ class ServerWorker:
 				self.state = self.READY
 
 				print("ok_200")
+			else:
+				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+				self.state = self.READY
 
 		# Process TEARDOWN request
 		elif requestType == self.TEARDOWN:
 			print("processing TEARDOWN\n")
-			self.state = self.INIT
 			print("ok_200")
-
-			# Close the RTP socket
-			self.clientInfo['rtpSocket'].close()
+			if(self.state == self.READY):
+				# Close the RTP socket
+				self.clientInfo['rtpSocket'].close()
 
 	def sendRtp(self):
 		"""Send RTP packets over UDP."""
