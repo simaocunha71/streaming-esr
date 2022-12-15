@@ -5,6 +5,8 @@ from OlyPacket import OlyPacket
 from VideoStream import VideoStream
 from RtpPacket import RtpPacket
 
+RTP_PORT = 9999
+
 class ServerWorker:
 	#RTSP messages
 	SETUP = 'SETUP'
@@ -26,12 +28,11 @@ class ServerWorker:
 	FILE_NOT_FOUND_404 = 1
 	CON_ERR_500 = 2
 
-	def __init__(self,nodeAdrr,nodePort, filename, olySocket):
+	def __init__(self,clientAddress, filename, olySocket):
 		"""Server Worker initialization"""
 		self.clientInfo = {}
 		# Endereço e porta de atendimento do vizinho do servidor
-		self.nodeAdrr = nodeAdrr
-		self.nodePort = nodePort
+		self.clientAddressPort = (clientAddress,RTP_PORT)
 		try:
 			self.clientInfo['videoStream'] = VideoStream(filename)
 		except IOError:
@@ -60,10 +61,8 @@ class ServerWorker:
 
 	def processRtspRequest(self,data):
 		"""Process RTSP request sent from the client."""
-
 		# Get the request type
 		requestType = data.type
-		print("PROCESS REQUEST")
 		# Process SETUP request
 		if requestType == self.SETUP:
 			if self.state == self.INIT:
@@ -71,42 +70,20 @@ class ServerWorker:
 				print("processing SETUP\n")
 				# Create a new socket for RTP/UDP
 				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
 				self.state = self.READY
-
-				# Send RTSP reply
-				print("ok_200")
-
-
-
 		# Process PLAY request
 		elif requestType == self.PLAY:
 			if self.state == self.READY:
 				print("processing PLAY\n")
 				self.state = self.PLAYING
-
-				print("ok_200")
-			else:
-				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-				self.state = self.PLAYING
-
-
-
 		# Process PAUSE request
 		elif requestType == self.PAUSE:
 			if self.state == self.PLAYING:
 				print("processing PAUSE\n")
 				self.state = self.READY
-
-				print("ok_200")
-			else:
-				self.clientInfo["rtpSocket"] = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-				self.state = self.READY
-
 		# Process TEARDOWN request
 		elif requestType == self.TEARDOWN:
 			print("processing TEARDOWN\n")
-			print("ok_200")
 			if(self.state == self.READY):
 				# Close the RTP socket
 				self.clientInfo['rtpSocket'].close()
@@ -121,7 +98,7 @@ class ServerWorker:
 				frameNumber = self.clientInfo['videoStream'].frameNbr()
 				try:
 					if self.state == self.PLAYING:
-						self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(self.nodeAdrr,self.nodePort))
+						self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),self.clientAddressPort)
 				except Exception as e:
 					print("Connection Error")
 					print(e)
@@ -143,7 +120,5 @@ class ServerWorker:
 		ssrc = 0
 
 		rtpPacket = RtpPacket()
-
 		rtpPacket.encode(version, padding, extension, cc, seqnum, marker, pt, ssrc, payload)
-
 		return rtpPacket.getPacket()

@@ -6,18 +6,21 @@ OlyPacket implementa mensagens de controlo da rede overlay. As mensagens são em
 são de parados por ';'. Um Olypacket tem um tamanho fixo de 250 bytes.
 
 TYPE:
-    H -> Hello packet, pacote de registo no bootstrapper
-    HR -> Hello response, pacote de resposta ao Hello
-    P -> Probe packet, pacote de proba
+    HELLO -> Hello packet, pacote de registo no bootstrapper
+    HELLORESPONSE -> Hello response, pacote de resposta ao Hello
+    PROBE -> Probe packet, pacote de proba
     SETUP -> Setup packet
     PLAY -> Play packet
     PAUSE -> Pause packet
     TEARDOWN -> Teardown packet
 PAYLOAD:
-    O payload só terá valores quando o TYPE for HR ou P. O PAYLOAD tem os seus valores separados
+    O payload só terá valores quando o TYPE for HELLORESPONSE ou PROBE. O PAYLOAD tem os seus valores separados
 pelo caracter ",".
 
 """
+
+OLY_BUFFER_SIZE = 250
+OLY_PORT = 5555
 
 class OlyPacket:
 
@@ -43,11 +46,11 @@ class OlyPacket:
 
     def decode(self,bytearray):
         data = bytearray.decode("utf-8")
-        data_fields = data.split(";")
+        dataFields = data.split(";")
 
         # Tipo o pacote
-        self.type = data_fields[0]
+        self.type = dataFields[0]
         # Array com os valores o payload
-        self.payload = data_fields[1].split(",")
+        self.payload = dataFields[1].split(",")
 
         return self

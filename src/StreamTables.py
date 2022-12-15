@@ -1,68 +1,13 @@
 from threading import Lock
 
-# Tabela quem mantém a informção à cerca de toda a topologia da overlay
-class OverlayTable:
-    @classmethod
-    def __init__(self):
-        self.groups = []
-        self.lock = Lock()
-
-    @classmethod
-    def add_group(self,ip,groupList):
-        self.groups.append({ "node_ip" : ip ,"neighbours" : groupList })
-
-    def get_neighbours(self,ip):
-        self.lock.acquire()
-        try:
-            neighbours_list = []
-            for group in self.groups:
-                if group["node_ip"] == ip:
-                    for entry in group["neighbours"]:
-                        neighbours_list.append(entry)
-            return neighbours_list
-        except Exception as e:
-            print(e)
-        finally:
-            self.lock.release()
-
-    @classmethod
-    def load(self,configFile):
-        f = open(configFile, "r")
-
-        groupList = []
-        actual_node = ""
-        for line in f:
-            line = line.strip()
-            if line == "":
-                continue
-            elif line[0]=='#':
-                if groupList != []:
-                    self.add_group(actual_node,groupList)
-                actual_node = line[1:]
-                groupList = []
-            else:
-                groupList.append(line)
-
-        if groupList != []:
-            self.add_group(actual_node,groupList)
-        f.close()
-
-
-    @classmethod
-    def display(self):
-        for group in  self.groups:
-            print("VIZINHOS DE " + group["node_ip"] + ":")
-            for entry in group["neighbours"]:
-                print(entry)
-
-# Tabela de stream, guarda detalhes de um fluxo de stream partilhar num nodo
+# Stream, guarda detalhes de um fluxo de stream
 class Stream:
     def __init__(self,destination):
         self.destination = destination
         self.state = "closed"
 
 
-# Table de routing, guarda conjunto de streams num nodo
+# Table de streaming, guarda conjunto de fluxos de streams
 class StreamsTable:
 
     def __init__(self):
@@ -88,8 +33,7 @@ class StreamsTable:
     def add_stream(self,destination):
         self.lock.acquire()
         try:
-            new_stream = Stream(destination)
-            self.streams.append(new_stream)
+            self.streams.append(Stream(destination))
         finally:
             self.lock.release()
 
@@ -128,7 +72,6 @@ class StreamsTable:
         try:
             for stream in self.streams:
                 if(stream.destination==destination):
-                    print("REMOVE")
                     self.streams.remove(stream)
             if(self.status != "closed"):
                 self.check_status()

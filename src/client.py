@@ -9,6 +9,10 @@ from OlyPacket import OlyPacket
 CACHE_FILE_NAME = "cache"
 CACHE_FILE_EXT = ".jpg"
 
+RTP_PORT = 9999
+OLY_PORT = 5555
+RTP_BUFFER_SIZE = 20480
+
 class Client:
 	#Streaming states
 	INIT = 0
@@ -17,19 +21,17 @@ class Client:
 	state = INIT
 
 	#RTSP messages
-	SETUP = 0
-	PLAY = 1
-	PAUSE = 2
-	TEARDOWN = 3
+	SETUP = 'SETUP'
+	PLAY = 'PLAY'
+	PAUSE = 'PAUSE'
+	TEARDOWN = 'TEARDOWN'
 
-	def __init__(self, master, nodeaddr,rtspSocket,rtspPort,rtpPort):
+	def __init__(self, master, serverAddress,rtspSocket):
 		"""Client initialization"""
 		self.master = master
 		self.master.protocol("WM_DELETE_WINDOW", self.handler)
 		self.createWidgets()
-		self.nodeAddr = nodeaddr
-		self.rtspPort = int(rtspPort)
-		self.rtpPort = int(rtpPort)
+		self.rtspAddressPort = (serverAddress, OLY_PORT)
 		self.rtspSocket = rtspSocket
 		self.rtspSeq = 0
 		self.requestSent = -1
@@ -101,7 +103,7 @@ class Client:
 		"""Listen for RTP packets."""
 		while True:
 			try:
-				data = self.rtpSocket.recv(20480)
+				data = self.rtpSocket.recv(RTP_BUFFER_SIZE)
 				if data:
 					rtpPacket = RtpPacket()
 					rtpPacket.decode(data)
@@ -148,7 +150,7 @@ class Client:
 			self.rtspSeq+=1
 
 			# Write the RTSP request to be sent.
-			type_request = 'SETUP'
+			type_request = self.SETUP
 
 			# Keep track of the sent request.
 			self.requestSent = self.SETUP
@@ -160,7 +162,7 @@ class Client:
 			print('\nPLAY event\n')
 
 			# Write the RTSP request to be sent.
-			type_request = 'PLAY'
+			type_request = self.PLAY
 
 			# Keep track of the sent request.
 			self.requestSent = self.PLAY
@@ -172,7 +174,7 @@ class Client:
 			print('\nPAUSE event\n')
 
 			# Write the RTSP request to be sent.
-			type_request = 'PAUSE'
+			type_request = self.PAUSE
 
 			# Keep track of the sent request.
 			self.requestSent = self.PAUSE
@@ -184,7 +186,7 @@ class Client:
 			print('\nTEARDOWN event\n')
 
 			# Write the RTSP request to be sent.
-			type_request = 'TEARDOWN'
+			type_request = self.TEARDOWN
 
 			# Keep track of the sent request.
 			self.requestSent = self.TEARDOWN
@@ -194,7 +196,7 @@ class Client:
 		request = request.encode(type_request, {})
 
 		# Send the RTSP request using rtspSocket.
-		self.rtspSocket.sendto(request,(self.nodeAddr,self.rtspPort))
+		self.rtspSocket.sendto(request,self.rtspAddressPort)
 			
 
 	def openRtpPort(self):
@@ -208,11 +210,11 @@ class Client:
 
 		try:
 			# Bind the socket to the address using the RTP port given by the client user
-			self.rtpSocket.bind(('',self.rtpPort))
+			self.rtpSocket.bind(('',RTP_PORT))
 			print('\nBind \n')
 		except Exception as e:
 			tkinter.messagebox.showwarning('Unable to Bind', '%s' %e)
-			tkinter.messagebox.showwarning('Unable to Bind', 'Unable to bind PORT=%d' %self.rtpPort)
+			tkinter.messagebox.showwarning('Unable to Bind', 'Unable to bind PORT=%d' %RTP_PORT)
 
 	def handler(self):
 		"""Handler on explicitly closing the GUI window."""
