@@ -4,7 +4,7 @@ import sys
 import os
 import pickle
 import random
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from OlyPacket import *
 from data import *
 from RtpPacket import RtpPacket
@@ -15,13 +15,31 @@ OLY_BUFFER_SIZE = 250
 RTP_PORT = 9999
 OLY_PORT = 5555
 
+MAX_DELTA = timedelta(days = 1)
+VALIDATE_TIME = timedelta(seconds = 10)
+class Route:
+    def __init__(self,source,saltos,delta, time):
+        self.source = source
+        self.saltos = saltos
+        self.delta = delta
+        self.time = datetime.combine(date.today(), time)
+
+    def updateRoute(self,source,saltos,delta, time):
+        if(time - self.time >= VALIDATE_TIME or delta < self.delta): #Ou recebe uma rota melhor ou o rota expirou
+            self.delta = delta
+            self.source = source
+            self.saltos = saltos
+            self.time = time
+            return True
+        return False        
+
 class oNode:
     def __init__(self, isBootstrapper, bootstrapperAddressPort):
         self.isBootstrapper = isBootstrapper
         self.bootstrapperAddressPort = bootstrapperAddressPort
         self.neighbours = []
-        self.routingTable = RoutingTable()
         self.streamsTable = StreamsTable()
+        self.route = Route("",0,MAX_DELTA, datetime.now().time())
         if(self.isBootstrapper == True):
             self.olytable = OverlayTable()
 
@@ -87,6 +105,8 @@ class oNode:
 
 
             delta = datetime.combine(date.today(), now) - datetime.combine(date.today(), timestamp)
+            print("DELTA: ", end="")
+            print(str(delta))
 
             # Número de saltos do servidor até o nodo atual
             saltos = int(olypacket.payload[1]) + 1
@@ -96,25 +116,23 @@ class oNode:
 
             #cada entrada da tabela assume que é o tempo e custo até ao servidor
             #info ta tabela: source_ip saltos time_cost destinos
-            self.routingTable.add_route(source_ip,saltos,delta)
-            print("Recebi \"P\"")
-            self.routingTable.print()
+            updated = self.route.updateRoute(probe_source_ip, saltos, delta, datetime.combine(date.today(), now))
 
+            if(updated):
             # Data a enviar aos nodos viznhos
-            data = [timestamp,saltos,self.ip]
+                data = [timestamp,saltos,self.ip]
 
-            prob_packet = OlyPacket()
-            encoded_prob_packet = prob_packet.encode("P",data)
+                prob_packet = OlyPacket()
+                encoded_prob_packet = prob_packet.encode("P",data)
 
-            # O nodo envia mensagem de proba a todos os seus vizinhos ativos
-            print("Envio probe para os vizinhos")
-            for elem in self.neighbours:
-                print("NodeIP: " + elem + " | SOURCEIP: " + source_ip)
-                if elem != probe_source_ip:
-                    self.olyClientSocket.sendto(encoded_prob_packet,(elem,OLY_PORT))
+                # O nodo envia mensagem de proba a todos os seus vizinhos ativos
+                print("Envio probe para os vizinhos")
+                for elem in self.neighbours:
+                    print("NodeIP: " + elem + " | SOURCEIP: " + source_ip)
+                    if elem != probe_source_ip:
+                        self.olyClientSocket.sendto(encoded_prob_packet,(elem,OLY_PORT))
         else:
-            self.routingTable.print()
-            destination_ip = self.routingTable.next_jump()
+            destination_ip = self.route.source
 
             if olypacket.type=="SETUP":
                 print("Criei novo fluxo |source: " + source_ip  + "| destination: " + destination_ip)

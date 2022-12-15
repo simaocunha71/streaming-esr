@@ -147,41 +147,4 @@ class StreamsTable:
         finally:
             self.lock.release()
 
-class Route:
-    def __init__(self,source,saltos,delta):
-        self.source = source
-        self.saltos = saltos
-        self.delta = delta
 
-class RoutingTable:
-
-    def __init__(self):
-        self.lock = Lock()
-        self.routes = []
-
-    def add_route(self,source,saltos,delta):
-        self.lock.acquire()
-        try:
-            new_route = Route(source,saltos,delta)
-            self.routes.append(new_route)
-        finally:
-            self.lock.release()
-
-    def print(self):
-        print("Routing Table:")
-        print("Origem------Saltos------Delta")
-        for route in self.routes:
-            print(str(route.source) + "      " + str(route.saltos) + "      " + str(route.delta))
-
-    def next_jump(self):
-        self.lock.acquire()
-        try:
-            min = self.routes[0].delta
-            next_jump = self.routes[0].source
-            for route in self.routes:
-                if route.delta < min:
-                    min = route.delta
-                    next_jump = route.source
-            return next_jump
-        finally:
-            self.lock.release()
