@@ -58,3 +58,5 @@ class ClientLauncher:
 
         self.send_hello_packet()
         self.receive_hello_packet()
+
+        self.launch_client()

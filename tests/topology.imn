@@ -396,6 +396,7 @@ node n16 {
     interface-peer {e0 n10}
     interface-peer {e1 n25}
     interface-peer {e2 n24}
+    interface-peer {e3 n27}
 }
 
 node n17 {
@@ -565,6 +566,23 @@ node n26 {
     interface-peer {eth0 n5}
 }
 
+node n27 {
+    type router
+    model host
+    network-config {
+	hostname SvBackup
+	!
+	interface eth0
+	 ip address 10.0.12.10/24
+	 ipv6 address 2001:12::10/64
+	!
+    }
+    canvas c1
+    iconcoords {548.0 496.0}
+    labelcoords {548.0 528.0}
+    interface-peer {eth0 n16}
+}
+
 link l1 {
     nodes {n2 n1}
     bandwidth 0
@@ -722,6 +740,11 @@ link l31 {
 
 link l32 {
     nodes {n5 n26}
+    bandwidth 0
+}
+
+link l33 {
+    nodes {n16 n27}
     bandwidth 0
 }
 

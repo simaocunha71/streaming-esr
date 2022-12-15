@@ -1,6 +1,4 @@
-# Packet de comunicação de rede overlay (a definir ainda)
-import pickle
-
+# Packet de comunicação de rede overlay
 """
 OlyPacket implementa mensagens de controlo da rede overlay. As mensagens são em formato string, e os seus campos
 são de parados por ';'. Um Olypacket tem um tamanho fixo de 250 bytes.

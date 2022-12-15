@@ -5,7 +5,7 @@ import time
 from threading import Thread
 from OlyPacket import OlyPacket
 from ServerWorker import ServerWorker
-from src.Bootstrapper import Bootstrapper
+from Bootstrapper import Bootstrapper
 
 OLY_BUFFER_SIZE = 250
 OLY_PORT = 5555
@@ -68,7 +68,7 @@ class ServerLauncher:
         self.receive_hello_packet()
 
         #Monitorização periódica
-        Thread(target=self.sendProbeMessage).start() 
+        Thread(target=self.send_probe_packet).start() 
 
         #Start Server Worker
         ServerWorker(self.neighbour, self.filename, self.UDPServerSocket).run()

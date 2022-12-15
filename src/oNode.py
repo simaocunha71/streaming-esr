@@ -1,9 +1,9 @@
 from threading import Thread
 import sys
-import Node
-import ServerLauncher
-import ClientLauncher
-import Bootstrapper
+from Node import *
+from ServerLauncher import *
+from ClientLauncher import *
+from Bootstrapper import *
 from OlyPacket import *
 
 
@@ -14,7 +14,13 @@ if __name__ == "__main__":
     if nArgs==2:
         bootstrapperAdress = args[1]
         bootstrapperAdressPort = (bootstrapperAdress,OLY_PORT)
-        if args[0]=="-c":
+        # Iniciar bootstrapper:
+        # oNode -bs <config_file>
+        if args[0]=="-bs":
+            print("------------Bootstrapper------------")
+            bootstrapper = Bootstrapper(args[1])
+            bootstrapper.run()
+        elif args[0]=="-c":
             # Adicionar novo cliente à overlay:
             # oNode -c <bootstrapper_adress>
             client = ClientLauncher(bootstrapperAdressPort)
@@ -28,13 +34,7 @@ if __name__ == "__main__":
             print("ERROR")
 
     elif nArgs==3:
-        # Iniciar bootstrapper:
-        # oNode -bs <config_file>
-        if args[0]=="-bs":
-            print("------------Bootstrapper------------")
-            bootstrapper = Bootstrapper(args[1])
-            bootstrapper.run()
-        elif args[0]=="-s":
+        if args[0]=="-s":
             bootstrapperAdress = args[1]
             bootstrapperAdressPort = (bootstrapperAdress,OLY_PORT)
             filename = args[2]

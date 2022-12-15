@@ -48,6 +48,7 @@ class Node:
         self.lock = Lock()
 
     def run(self):
+        print("--------------Node--------------")
         Thread(target=self.service_RTP).start()
         Thread(target=self.service_OLY).start()
 
@@ -87,7 +88,7 @@ class Node:
             new_source = self.route.source
             if(updated):
                 print("Updated Route")
-                if(old_source != new_source and self.streamsTable.state == "open"):
+                if(old_source != new_source and self.streamsTable.status == "open"): #TODO
                     print("Updated Source")
                     SetupPacket = OlyPacket()
                     SetupPacket = SetupPacket.encode("SETUP", [])
@@ -214,6 +215,6 @@ class Node:
            bytesAddressPair = self.rtpServerSocket.recvfrom(RTP_BUFFER_SIZE)
            data = bytesAddressPair[0]
 
-           thread = Thread(target=self.RTP_handler,args=(data))
+           thread = Thread(target=self.RTP_handler,args=[data])
            thread.start()
        os._exit(0)
