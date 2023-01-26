@@ -5,9 +5,9 @@
 </p>
 
 #### Trabalho #1: Streaming de áudio e vídeo a pedido e em tempo real 
-* Enunciado: [aqui](https://github.com/simaocunha71/streaming-esr/docs/ESR-Enunciado-TP1-2022a.pdf)
-* Relatório: [aqui](https://github.com/simaocunha71/streaming-esr/docs/ESR_TP1_PL72_Rel.pdf)
+* Enunciado: [aqui](https://github.com/simaocunha71/streaming-esr/blob/main/docs/ESR-Enunciado-TP1-2022a.pdf)
+* Relatório: [aqui](https://github.com/simaocunha71/streaming-esr/blob/main/docs/ESR_TP1_PL72_Rel.pdf)
 
 #### Trabalho #2: Serviço Over the Top para entrega de multimédia
-* Enunciado: [aqui](https://github.com/simaocunha71/streaming-esr/docs/ESR-Enunciado-TP2-2022d.pdf)
-* Relatório: [aqui](https://github.com/simaocunha71/streaming-esr/docs/ESR_TP2_PL72_Rel.pdf)
+* Enunciado: [aqui](https://github.com/simaocunha71/streaming-esr/blob/main/docs/ESR-Enunciado-TP2-2022d.pdf)
+* Relatório: [aqui](https://github.com/simaocunha71/streaming-esr/blob/main/docs/ESR_TP2_PL72_Rel.pdf)
